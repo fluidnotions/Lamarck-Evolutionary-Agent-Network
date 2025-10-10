@@ -1,7 +1,7 @@
 """
 Agent implementations for HVAS Mini.
 
-Base agent provides RAG memory, parameter evolution, and LangGraph integration.
+Specialized agents that inherit from BaseAgent and provide domain-specific content generation.
 """
 
 from abc import ABC, abstractmethod
@@ -53,73 +53,38 @@ except ImportError:
 
 
 class BaseAgent(ABC):
-    """Base agent with RAG memory and parameter evolution.
-
-    Each agent:
-    - Has its own ChromaDB memory collection
-    - Retrieves relevant memories before generation
-    - Evolves parameters based on performance scores
-    - Stores successful outputs for future use
-    """
+    """Base agent with RAG memory and parameter evolution."""
 
     def __init__(self, role: str, memory_manager: MemoryManager):
-        """Initialize base agent.
-
-        Args:
-            role: Agent role name (intro, body, conclusion)
-            memory_manager: Memory manager for this agent's memories
-        """
         self.role = role
         self.memory = memory_manager
-
-        # Initialize LLM
         self.llm = ChatAnthropic(
             model=os.getenv("MODEL_NAME", "claude-3-haiku-20240307"),
             temperature=float(os.getenv("BASE_TEMPERATURE", "0.7")),
         )
-
-        # Evolutionary parameters
         self.parameters = {
             "temperature": float(os.getenv("BASE_TEMPERATURE", "0.7")),
             "score_history": [],
             "generation_count": 0,
         }
-
-        # Configuration
         self.enable_evolution = (
             os.getenv("ENABLE_PARAMETER_EVOLUTION", "true").lower() == "true"
         )
-
-        # Pending memory storage
         self.pending_memory: Optional[Dict] = None
 
     async def __call__(self, state: BlogState) -> BlogState:
-        """Execute agent - called by LangGraph.
-
-        Args:
-            state: Current workflow state
-
-        Returns:
-            Updated state with this agent's content
-        """
-        # 1. Retrieve relevant memories
         memories = self.memory.retrieve(state["topic"])
         state["retrieved_memories"][self.role] = [m["content"] for m in memories]
 
-        # 2. Log retrieval for visualization
         if os.getenv("SHOW_MEMORY_RETRIEVAL", "true").lower() == "true":
             state["stream_logs"].append(
                 f"[{self.role}] Retrieved {len(memories)} memories"
             )
 
-        # 3. Generate content with current parameters
         self.llm.temperature = self.parameters["temperature"]
         content = await self.generate_content(state, memories)
-
-        # 4. Store in state
         state[self.content_key] = content
 
-        # 5. Prepare for memory storage (will be stored after evaluation)
         self.pending_memory = {
             "content": content,
             "topic": state["topic"],
@@ -129,14 +94,8 @@ class BaseAgent(ABC):
         return state
 
     def store_memory(self, score: float):
-        """Store successful content in memory.
-
-        Args:
-            score: Quality score from evaluator
-        """
         if self.pending_memory is None:
             return
-
         memory_id = self.memory.store(
             content=self.pending_memory["content"],
             topic=self.pending_memory["topic"],
@@ -147,42 +106,25 @@ class BaseAgent(ABC):
             },
         )
 
-        if memory_id:
-            # Memory was stored (met threshold)
-            pass
-
     def evolve_parameters(self, score: float, state: BlogState):
-        """Adjust parameters based on performance.
-
-        Args:
-            score: Latest quality score
-            state: Current state (for logging parameter changes)
-        """
         if not self.enable_evolution:
             return
 
-        # Track score history
         self.parameters["score_history"].append(score)
         self.parameters["generation_count"] += 1
 
-        # Calculate rolling average (last 5)
         recent_scores = self.parameters["score_history"][-5:]
         avg_score = sum(recent_scores) / len(recent_scores)
 
-        # Adjust temperature based on performance
         learning_rate = float(os.getenv("EVOLUTION_LEARNING_RATE", "0.1"))
 
         if avg_score < 6.0:
-            # Poor performance: reduce randomness
             delta = -learning_rate
         elif avg_score > 8.0:
-            # Good performance: increase creativity
             delta = learning_rate
         else:
-            # Stable performance: minor adjustments toward target
             delta = (7.0 - avg_score) * learning_rate * 0.5
 
-        # Apply change with bounds
         old_temp = self.parameters["temperature"]
         new_temp = old_temp + delta
         new_temp = max(
@@ -192,7 +134,6 @@ class BaseAgent(ABC):
 
         self.parameters["temperature"] = new_temp
 
-        # Log parameter change
         if os.getenv("SHOW_PARAMETER_CHANGES", "true").lower() == "true":
             state["parameter_updates"][self.role] = {
                 "old_temperature": old_temp,
@@ -204,22 +145,163 @@ class BaseAgent(ABC):
     @property
     @abstractmethod
     def content_key(self) -> str:
-        """State key for this agent's content.
-
-        Returns:
-            Key name (e.g., 'intro', 'body', 'conclusion')
-        """
         pass
 
     @abstractmethod
     async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
-        """Generate content based on state and memories.
-
-        Args:
-            state: Current workflow state
-            memories: Retrieved relevant memories
-
-        Returns:
-            Generated content string
-        """
         pass
+
+
+class IntroAgent(BaseAgent):
+    """Agent specialized in writing introductions."""
+
+    @property
+    def content_key(self) -> str:
+        return "intro"
+
+    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
+        # Format memory examples
+        memory_examples = ""
+        if memories:
+            memory_examples = "\n\n".join(
+                [
+                    f"Example (score: {m['score']:.1f}):\n{m['content']}"
+                    for m in memories[:2]
+                ]
+            )
+        else:
+            memory_examples = "No previous examples available."
+
+        # Construct prompt
+        prompt = f"""Write an engaging introduction for a blog post about: {state['topic']}
+
+Previous successful introductions on similar topics:
+{memory_examples}
+
+Requirements:
+- 2-3 sentences
+- Hook the reader immediately
+- Mention the topic naturally
+- Set expectations for what follows
+
+Introduction:"""
+
+        # Generate
+        response = await self.llm.ainvoke(prompt)
+        return response.content
+
+
+class BodyAgent(BaseAgent):
+    """Agent specialized in writing main body content."""
+
+    @property
+    def content_key(self) -> str:
+        return "body"
+
+    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
+        # Can see the intro if it was generated
+        context = f"Introduction: {state.get('intro', 'Not yet written')}"
+
+        # Format memory examples (truncated for prompt)
+        memory_examples = ""
+        if memories:
+            memory_examples = "\n\n".join(
+                [
+                    f"Example body (score: {m['score']:.1f}):\n{m['content'][:200]}..."
+                    for m in memories[:2]
+                ]
+            )
+
+        # Construct prompt
+        prompt = f"""Write the main body for a blog post about: {state['topic']}
+
+{context}
+
+Previous successful body sections:
+{memory_examples}
+
+Requirements:
+- 3-4 paragraphs
+- Informative and detailed
+- Include specific examples or data
+- Natural flow from the introduction
+
+Body:"""
+
+        # Generate
+        response = await self.llm.ainvoke(prompt)
+        return response.content
+
+
+class ConclusionAgent(BaseAgent):
+    """Agent specialized in writing conclusions."""
+
+    @property
+    def content_key(self) -> str:
+        return "conclusion"
+
+    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
+        # Can see intro and body if generated
+        intro_preview = state.get("intro", "Not yet written")
+        body_preview = state.get("body", "Not yet written")[:200]
+
+        context = f"""
+Introduction: {intro_preview}
+
+Body preview: {body_preview}...
+"""
+
+        # Format memory examples
+        memory_examples = ""
+        if memories:
+            memory_examples = "\n".join(
+                [f"Example: {m['content']}" for m in memories[:1]]
+            )
+
+        # Construct prompt
+        prompt = f"""Write a conclusion for this blog post about: {state['topic']}
+
+{context}
+
+Previous successful conclusions:
+{memory_examples}
+
+Requirements:
+- 2-3 sentences
+- Summarize key points
+- End with memorable statement
+- Call to action or thought to ponder
+
+Conclusion:"""
+
+        # Generate
+        response = await self.llm.ainvoke(prompt)
+        return response.content
+
+
+def create_agents(persist_directory: str = "./data/memories") -> Dict[str, BaseAgent]:
+    """Create all specialized agents.
+
+    Args:
+        persist_directory: Where to persist memories
+
+    Returns:
+        Dictionary of agent instances
+    """
+    agents = {}
+
+    for role in ["intro", "body", "conclusion"]:
+        # Create memory manager for this agent
+        memory = MemoryManager(
+            collection_name=f"{role}_memories", persist_directory=persist_directory
+        )
+
+        # Create appropriate agent
+        if role == "intro":
+            agents[role] = IntroAgent(role, memory)
+        elif role == "body":
+            agents[role] = BodyAgent(role, memory)
+        elif role == "conclusion":
+            agents[role] = ConclusionAgent(role, memory)
+
+    return agents
