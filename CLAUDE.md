@@ -12,6 +12,185 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Core Research Question**: Can agents with individual memory and parameter evolution demonstrate measurable learning improvements across similar tasks?
 
+## Iteration Implementation Workflow
+
+When given a new iteration outline or feature request, follow this structured workflow:
+
+### 1. Analyze & Plan
+
+```bash
+# Read the iteration outline (e.g., NEXT_ITERATION_OUTLINE.md or spec.md)
+# Analyze in terms of current architecture:
+# - What components need modification?
+# - What new components are needed?
+# - What are the dependencies between changes?
+```
+
+Create a work division document (e.g., `WORK_DIVISION.md`) that:
+- Breaks work into feature branches based on dependencies
+- Identifies parallel vs sequential work
+- Creates a dependency graph
+
+**Example dependency structure**:
+```
+foundation (blocking)
+  ├── feature-a (parallel)
+  └── feature-b (parallel)
+      └── integration (depends on a + b)
+```
+
+### 2. Create Git Worktrees
+
+```bash
+# Create worktrees for each feature branch
+git worktree add worktrees/feature-name -b feature/feature-name
+
+# Repeat for all branches
+git worktree add worktrees/another-feature -b feature/another-feature
+```
+
+### 3. Create AGENT_TASK.md in Each Worktree
+
+In each worktree root, create `AGENT_TASK.md`:
+
+```markdown
+# Agent Task: Feature Name
+
+## Branch: `feature/feature-name`
+
+## Priority: HIGH/MEDIUM/LOW
+
+## Execution: SEQUENTIAL/PARALLEL (with what?)
+
+## Objective
+Clear description of what needs to be implemented.
+
+## Dependencies
+- ✅ feature/prerequisite-branch (must be merged first)
+
+## Tasks
+
+### 1. Specific Task
+Detailed implementation instructions with code examples.
+
+### 2. Another Task
+More details...
+
+## Deliverables Checklist
+- [ ] File 1 created with X functionality
+- [ ] File 2 created with Y functionality
+- [ ] Tests passing
+
+## Acceptance Criteria
+1. ✅ Criterion 1
+2. ✅ Criterion 2
+
+## Testing
+```bash
+# How to test this feature
+uv run pytest tests/test_feature.py
+```
+
+## Next Steps
+After completion, can merge to main and proceed with...
+```
+
+**Key**: AGENT_TASK.md at worktree root serves as implementation guide.
+
+### 4. Implement in Worktrees
+
+Implement code in each worktree following AGENT_TASK.md instructions:
+
+```bash
+cd worktrees/feature-name
+# Create files, write code, create tests
+# Work can happen in parallel across worktrees
+```
+
+### 5. Commit Implementation
+
+```bash
+cd worktrees/feature-name
+git add -A
+git commit -m "Implement feature-name: Brief description
+
+- Detail 1
+- Detail 2
+- Detail 3
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+### 6. Move AGENT_TASK.md to docs/ (Critical!)
+
+**Before final merge**, move AGENT_TASK.md to avoid merge conflicts:
+
+```bash
+cd worktrees/feature-name
+mkdir -p docs/feature-name
+git mv AGENT_TASK.md docs/feature-name/
+git commit -m "Move AGENT_TASK.md to docs/feature-name to avoid merge conflicts"
+```
+
+**Why?** Every branch has an AGENT_TASK.md at root. Without this step, merging causes conflicts.
+
+### 7. Merge or Push for PR
+
+**Option A: Merge to main**
+```bash
+cd /path/to/main/repo
+git merge feature/feature-name -m "Merge feature-name"
+# Resolve any remaining conflicts
+# Repeat for all branches in dependency order
+```
+
+**Option B: Push for PR**
+```bash
+cd worktrees/feature-name
+git push -u origin feature/feature-name
+# Create PR on GitHub/GitLab
+# Repeat for all branches
+```
+
+### Dependency-Aware Merging
+
+When merging, respect dependencies:
+
+```bash
+# Phase 1: Foundation (blocking - must be first)
+git merge feature/foundation
+
+# Phase 2: Parallel features (can merge in any order)
+git merge feature/feature-a
+git merge feature/feature-b
+
+# Phase 3: Integration (after all prerequisites)
+git merge feature/integration
+```
+
+### Workflow Tips
+
+- **Concurrent Implementation**: Work on multiple worktrees simultaneously when there are no dependencies
+- **AGENT_TASK.md**: Keep implementation details specific (code snippets, file structures, test requirements)
+- **Commit Early**: Commit to branch before moving AGENT_TASK.md
+- **Test Before Merge**: Run tests in each worktree before merging
+- **Clean Merges**: The docs/<branch-name>/ pattern ensures AGENT_TASK.md files don't conflict
+
+### Worktree Management
+
+```bash
+# List all worktrees
+git worktree list
+
+# Remove a worktree (after merging)
+git worktree remove worktrees/feature-name
+
+# Prune deleted worktrees
+git worktree prune
+```
+
 ## Build & Run Commands
 
 ```bash
