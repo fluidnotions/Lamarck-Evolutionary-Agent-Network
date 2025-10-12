@@ -53,11 +53,12 @@ except ImportError:
 
 
 class BaseAgent(ABC):
-    """Base agent with RAG memory and parameter evolution."""
+    """Base agent with RAG memory, parameter evolution, and trust weighting."""
 
-    def __init__(self, role: str, memory_manager: MemoryManager):
+    def __init__(self, role: str, memory_manager: MemoryManager, trust_manager=None):
         self.role = role
         self.memory = memory_manager
+        self.trust_manager = trust_manager  # NEW: Trust weighting
         self.llm = ChatAnthropic(
             model=os.getenv("MODEL_NAME", "claude-3-haiku-20240307"),
             temperature=float(os.getenv("BASE_TEMPERATURE", "0.7")),
@@ -91,14 +92,31 @@ class BaseAgent(ABC):
                 f"[{self.role}] Retrieved {len(memories)} memories (concurrent)"
             )
 
-        # 3. Generate content (async)
-        self.llm.temperature = self.parameters["temperature"]
-        content = await self.generate_content(state, memories)
+        # 3. NEW: Get weighted context from peer agents
+        weighted_context = ""
+        if self.trust_manager:
+            peer_outputs = {}
+            if self.role == "body" and state.get("intro"):
+                peer_outputs["intro"] = state["intro"]
+            elif self.role == "conclusion":
+                if state.get("intro"):
+                    peer_outputs["intro"] = state["intro"]
+                if state.get("body"):
+                    peer_outputs["body"] = state["body"]
 
-        # 4. Store in state
+            if peer_outputs:
+                weighted_context = self.trust_manager.get_weighted_context(
+                    self.role, peer_outputs
+                )
+
+        # 4. Generate content (async) with weighted context
+        self.llm.temperature = self.parameters["temperature"]
+        content = await self.generate_content(state, memories, weighted_context)
+
+        # 5. Store in state
         state[self.content_key] = content
 
-        # 5. Record timing
+        # 6. Record timing
         agent_end = time.time()
         state["agent_timings"][self.role] = {
             "start": agent_start,
@@ -170,7 +188,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
+    async def generate_content(self, state: BlogState, memories: List[Dict], weighted_context: str = "") -> str:
         pass
 
 
@@ -181,7 +199,7 @@ class IntroAgent(BaseAgent):
     def content_key(self) -> str:
         return "intro"
 
-    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
+    async def generate_content(self, state: BlogState, memories: List[Dict], weighted_context: str = "") -> str:
         # Format memory examples
         memory_examples = ""
         if memories:
@@ -220,9 +238,12 @@ class BodyAgent(BaseAgent):
     def content_key(self) -> str:
         return "body"
 
-    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
-        # Can see the intro if it was generated
-        context = f"Introduction: {state.get('intro', 'Not yet written')}"
+    async def generate_content(self, state: BlogState, memories: List[Dict], weighted_context: str = "") -> str:
+        # Use weighted context if available, otherwise fallback to direct access
+        if weighted_context:
+            context = f"PEER CONTEXT (trust-weighted):\n{weighted_context}"
+        else:
+            context = f"Introduction: {state.get('intro', 'Not yet written')}"
 
         # Format memory examples (truncated for prompt)
         memory_examples = ""
@@ -262,12 +283,14 @@ class ConclusionAgent(BaseAgent):
     def content_key(self) -> str:
         return "conclusion"
 
-    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
-        # Can see intro and body if generated
-        intro_preview = state.get("intro", "Not yet written")
-        body_preview = state.get("body", "Not yet written")[:200]
-
-        context = f"""
+    async def generate_content(self, state: BlogState, memories: List[Dict], weighted_context: str = "") -> str:
+        # Use weighted context if available, otherwise fallback to direct access
+        if weighted_context:
+            context = f"PEER CONTEXT (trust-weighted):\n{weighted_context}"
+        else:
+            intro_preview = state.get("intro", "Not yet written")
+            body_preview = state.get("body", "Not yet written")[:200]
+            context = f"""
 Introduction: {intro_preview}
 
 Body preview: {body_preview}...
@@ -301,11 +324,12 @@ Conclusion:"""
         return response.content
 
 
-def create_agents(persist_directory: str = "./data/memories") -> Dict[str, BaseAgent]:
+def create_agents(persist_directory: str = "./data/memories", trust_manager=None) -> Dict[str, BaseAgent]:
     """Create all specialized agents.
 
     Args:
         persist_directory: Where to persist memories
+        trust_manager: Optional TrustManager for agent weighting
 
     Returns:
         Dictionary of agent instances
@@ -318,12 +342,12 @@ def create_agents(persist_directory: str = "./data/memories") -> Dict[str, BaseA
             collection_name=f"{role}_memories", persist_directory=persist_directory
         )
 
-        # Create appropriate agent
+        # Create appropriate agent with trust_manager
         if role == "intro":
-            agents[role] = IntroAgent(role, memory)
+            agents[role] = IntroAgent(role, memory, trust_manager)
         elif role == "body":
-            agents[role] = BodyAgent(role, memory)
+            agents[role] = BodyAgent(role, memory, trust_manager)
         elif role == "conclusion":
-            agents[role] = ConclusionAgent(role, memory)
+            agents[role] = ConclusionAgent(role, memory, trust_manager)
 
     return agents

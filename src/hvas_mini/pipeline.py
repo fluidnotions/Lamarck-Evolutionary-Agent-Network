@@ -19,6 +19,8 @@ try:
     from hvas_mini.evaluation import ContentEvaluator
     from hvas_mini.visualization import StreamVisualizer
     from hvas_mini.orchestration.async_coordinator import AsyncCoordinator
+    from hvas_mini.weighting.trust_manager import TrustManager
+    from hvas_mini.weighting.weight_updates import update_all_weights
 except ImportError:
     # For standalone development
     print("Warning: Some dependencies not available in standalone mode")
@@ -33,8 +35,14 @@ class HVASMiniPipeline:
         Args:
             persist_directory: Where to persist agent memories
         """
-        # Initialize agents
-        self.agents = create_agents(persist_directory)
+        # NEW: Initialize trust manager for agent weighting
+        self.trust_manager = TrustManager(
+            initial_weight=float(os.getenv("INITIAL_TRUST_WEIGHT", "0.5")),
+            learning_rate=float(os.getenv("TRUST_LEARNING_RATE", "0.1")),
+        )
+
+        # Initialize agents with trust manager
+        self.agents = create_agents(persist_directory, self.trust_manager)
 
         # Initialize evaluator and visualizer
         self.evaluator = ContentEvaluator()
@@ -106,7 +114,7 @@ class HVASMiniPipeline:
         return updated_state
 
     async def _evolution_node(self, state: BlogState) -> BlogState:
-        """Evolution node: store memories and update parameters.
+        """Evolution node: update weights, store memories, and update parameters.
 
         Args:
             state: Current workflow state with scores
@@ -114,6 +122,16 @@ class HVASMiniPipeline:
         Returns:
             Updated state
         """
+        # 1. NEW: Update trust weights based on performance signals
+        weight_updates = update_all_weights(
+            self.trust_manager, state, state["scores"]
+        )
+
+        # Store updated weights in state
+        state["agent_weights"] = self.trust_manager.get_all_weights()
+        state["weight_history"].extend(weight_updates)
+
+        # 2. Store memories and evolve parameters (existing logic)
         for role, agent in self.agents.items():
             score = state["scores"].get(role, 0)
 
@@ -123,8 +141,10 @@ class HVASMiniPipeline:
             # Evolve parameters based on score
             agent.evolve_parameters(score, state)
 
+        # 3. Log with weight update count
         state["stream_logs"].append(
-            "[Evolution] Memories stored, parameters updated"
+            f"[Evolution] Weights updated ({len(weight_updates)} relationships), "
+            f"memories stored, parameters evolved"
         )
 
         return state
