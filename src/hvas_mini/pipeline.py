@@ -18,6 +18,7 @@ try:
     from hvas_mini.agents import create_agents
     from hvas_mini.evaluation import ContentEvaluator
     from hvas_mini.visualization import StreamVisualizer
+    from hvas_mini.orchestration.async_coordinator import AsyncCoordinator
 except ImportError:
     # For standalone development
     print("Warning: Some dependencies not available in standalone mode")
@@ -39,42 +40,70 @@ class HVASMiniPipeline:
         self.evaluator = ContentEvaluator()
         self.visualizer = StreamVisualizer()
 
+        # NEW: Initialize async coordinator
+        self.coordinator = AsyncCoordinator()
+
         # Build LangGraph
         self.app = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
-        """Construct LangGraph workflow.
+        """Construct LangGraph workflow with concurrent execution.
 
-        Graph structure:
-        START → intro → body → conclusion → evaluate → evolve → END
+        NEW Graph structure:
+        START → intro → [body ∥ conclusion] → evaluate → evolve → END
+
+        Agents in brackets execute concurrently.
 
         Returns:
             Compiled LangGraph application
         """
         workflow = StateGraph(BlogState)
 
-        # Add agent nodes
+        # Layer 1: Intro (sequential - needs topic context)
         workflow.add_node("intro", self.agents["intro"])
-        workflow.add_node("body", self.agents["body"])
-        workflow.add_node("conclusion", self.agents["conclusion"])
 
-        # Add evaluation node
+        # Layer 2: Body & Conclusion (CONCURRENT)
+        # Both can read intro, but don't depend on each other
+        workflow.add_node("body_and_conclusion", self._concurrent_layer_2)
+
+        # Layer 3: Evaluation (sequential - needs all content)
         workflow.add_node("evaluate", self.evaluator)
 
-        # Add evolution node
+        # Layer 4: Evolution (sequential)
         workflow.add_node("evolve", self._evolution_node)
 
         # Define execution flow
         workflow.set_entry_point("intro")
-        workflow.add_edge("intro", "body")
-        workflow.add_edge("body", "conclusion")
-        workflow.add_edge("conclusion", "evaluate")
+        workflow.add_edge("intro", "body_and_conclusion")
+        workflow.add_edge("body_and_conclusion", "evaluate")
         workflow.add_edge("evaluate", "evolve")
         workflow.add_edge("evolve", END)
 
         # Compile with memory for checkpointing
         memory = MemorySaver()
         return workflow.compile(checkpointer=memory)
+
+    async def _concurrent_layer_2(self, state: BlogState) -> BlogState:
+        """Execute body and conclusion agents concurrently.
+
+        This is a LangGraph node that internally runs multiple agents in parallel.
+        """
+        # Execute both agents concurrently using coordinator
+        agents = [self.agents["body"], self.agents["conclusion"]]
+
+        updated_state = await self.coordinator.execute_layer(
+            layer_name="layer_2_content",
+            agents=agents,
+            state=state,
+            timeout=60.0
+        )
+
+        # Log concurrent execution
+        updated_state["stream_logs"].append(
+            "[Pipeline] Body and Conclusion executed concurrently"
+        )
+
+        return updated_state
 
     async def _evolution_node(self, state: BlogState) -> BlogState:
         """Evolution node: store memories and update parameters.
