@@ -73,18 +73,40 @@ class BaseAgent(ABC):
         self.pending_memory: Optional[Dict] = None
 
     async def __call__(self, state: BlogState) -> BlogState:
+        """Execute agent - called by LangGraph.
+
+        MODIFIED: Now truly async, can run concurrently with peers.
+        """
+        import time
+
+        agent_start = time.time()
+
+        # 1. Retrieve relevant memories (async-safe)
         memories = self.memory.retrieve(state["topic"])
         state["retrieved_memories"][self.role] = [m["content"] for m in memories]
 
+        # 2. Log retrieval
         if os.getenv("SHOW_MEMORY_RETRIEVAL", "true").lower() == "true":
             state["stream_logs"].append(
-                f"[{self.role}] Retrieved {len(memories)} memories"
+                f"[{self.role}] Retrieved {len(memories)} memories (concurrent)"
             )
 
+        # 3. Generate content (async)
         self.llm.temperature = self.parameters["temperature"]
         content = await self.generate_content(state, memories)
+
+        # 4. Store in state
         state[self.content_key] = content
 
+        # 5. Record timing
+        agent_end = time.time()
+        state["agent_timings"][self.role] = {
+            "start": agent_start,
+            "end": agent_end,
+            "duration": agent_end - agent_start
+        }
+
+        # 6. Prepare for memory storage
         self.pending_memory = {
             "content": content,
             "topic": state["topic"],
