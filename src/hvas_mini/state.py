@@ -70,6 +70,10 @@ class BlogState(TypedDict):
     timestamp: str  # ISO timestamp of generation start
     stream_logs: List[str]  # Activity logs for visualization
 
+    # NEW: Concurrency tracking
+    agent_timings: Dict[str, Dict[str, float]]  # {agent: {start, end, duration}}
+    layer_barriers: List[Dict[str, float]]  # [{layer_id, agents, wait_time}]
+
 
 def create_initial_state(topic: str) -> BlogState:
     """Create initial state for a new blog generation.
@@ -93,6 +97,8 @@ def create_initial_state(topic: str) -> BlogState:
         generation_id=str(uuid.uuid4()),
         timestamp=datetime.now().isoformat(),
         stream_logs=[],
+        agent_timings={},
+        layer_barriers=[],
     )
 
 
@@ -116,6 +122,8 @@ def validate_state(state: BlogState) -> bool:
         "generation_id",
         "timestamp",
         "stream_logs",
+        "agent_timings",
+        "layer_barriers",
     ]
 
     missing = [key for key in required_keys if key not in state]

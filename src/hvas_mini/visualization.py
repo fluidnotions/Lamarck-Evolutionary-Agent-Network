@@ -175,8 +175,52 @@ class StreamVisualizer:
 
         return Panel(logs_text, title="📋 Activity Log", border_style="blue")
 
+    def create_concurrency_panel(self, state: BlogState) -> Panel:
+        """Show agent execution timing and overlap.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Rich Panel with concurrency metrics
+        """
+        timings = state.get("agent_timings", {})
+
+        if not timings:
+            return Panel(
+                "[dim]No timing data yet[/dim]",
+                title="⏱️  Concurrent Execution",
+                border_style="magenta"
+            )
+
+        timing_text = ""
+        total_time = 0
+        overlapping_time = 0
+
+        for agent, timing in timings.items():
+            if timing.get("duration"):
+                duration = timing["duration"]
+                total_time += duration
+                timing_text += f"[cyan]{agent}:[/cyan] {duration:.2f}s\n"
+
+        # Calculate concurrency percentage
+        if state.get("layer_barriers"):
+            last_barrier = state["layer_barriers"][-1]
+            barrier_time = last_barrier.get("wait_time", 0)
+            if barrier_time > 0 and total_time > 0:
+                concurrency_pct = (1 - (barrier_time / total_time)) * 100
+                timing_text += f"\n[bold green]Concurrency: {concurrency_pct:.1f}%[/bold green]"
+
+        return Panel(
+            timing_text,
+            title="⏱️  Concurrent Execution",
+            border_style="magenta"
+        )
+
     async def display_stream(self, state_stream: AsyncIterator[BlogState]):
         """Display real-time execution updates.
+
+        MODIFIED: Add concurrency panel
 
         Args:
             state_stream: Async iterator of state updates
@@ -191,6 +235,7 @@ class StreamVisualizer:
         layout = Layout()
         layout.split_column(
             Layout(name="status", size=10),
+            Layout(name="concurrency", size=6),  # NEW
             Layout(name="memories", size=10),
             Layout(name="evolution", size=8),
             Layout(name="logs", size=7),
@@ -200,6 +245,7 @@ class StreamVisualizer:
         with Live(layout, console=self.console, refresh_per_second=4) as live:
             async for state in state_stream:
                 layout["status"].update(self.create_status_table(state))
+                layout["concurrency"].update(self.create_concurrency_panel(state))  # NEW
                 layout["memories"].update(self.create_memory_panel(state))
                 layout["evolution"].update(self.create_evolution_panel(state))
                 layout["logs"].update(self.create_logs_panel(state))
