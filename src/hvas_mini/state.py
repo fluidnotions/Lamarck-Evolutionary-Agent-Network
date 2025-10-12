@@ -74,6 +74,10 @@ class BlogState(TypedDict):
     agent_timings: Dict[str, Dict[str, float]]  # {agent: {start, end, duration}}
     layer_barriers: List[Dict[str, float]]  # [{layer_id, agents, wait_time}]
 
+    # NEW: Weight tracking (M2)
+    agent_weights: Dict[str, Dict[str, float]]  # {agent: {peer: trust_weight}}
+    weight_history: List[Dict[str, float]]  # [{generation, agent, peer, weight, delta}]
+
 
 def create_initial_state(topic: str) -> BlogState:
     """Create initial state for a new blog generation.
@@ -99,6 +103,12 @@ def create_initial_state(topic: str) -> BlogState:
         stream_logs=[],
         agent_timings={},
         layer_barriers=[],
+        agent_weights={
+            "intro": {},
+            "body": {},
+            "conclusion": {},
+        },
+        weight_history=[],
     )
 
 
@@ -124,6 +134,8 @@ def validate_state(state: BlogState) -> bool:
         "stream_logs",
         "agent_timings",
         "layer_barriers",
+        "agent_weights",
+        "weight_history",
     ]
 
     missing = [key for key in required_keys if key not in state]
