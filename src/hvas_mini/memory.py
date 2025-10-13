@@ -1,7 +1,7 @@
 """
 Memory management system for HVAS Mini.
 
-Handles ChromaDB operations, embeddings, and memory retrieval.
+Handles ChromaDB operations, embeddings, and memory retrieval with time-based decay.
 """
 
 import chromadb
@@ -12,6 +12,13 @@ import os
 from datetime import datetime
 import json
 from dotenv import load_dotenv
+
+# Import decay calculator
+try:
+    from hvas_mini.memory.decay import DecayCalculator
+except ImportError:
+    # For standalone development
+    DecayCalculator = None
 
 load_dotenv()
 
@@ -56,6 +63,13 @@ class MemoryManager:
         # Configuration
         self.score_threshold = float(os.getenv("MEMORY_SCORE_THRESHOLD", "7.0"))
         self.max_retrieve = int(os.getenv("MAX_MEMORIES_RETRIEVE", "3"))
+
+        # NEW: Initialize decay calculator (M3)
+        if DecayCalculator:
+            decay_lambda = float(os.getenv("MEMORY_DECAY_LAMBDA", "0.01"))
+            self.decay_calculator = DecayCalculator(decay_lambda=decay_lambda)
+        else:
+            self.decay_calculator = None
 
     def store(
         self, content: str, topic: str, score: float, metadata: Optional[Dict] = None
@@ -140,19 +154,36 @@ class MemoryManager:
             metadata = results["metadatas"][0][i]
             distance = results["distances"][0][i] if results["distances"] else 0.0
 
+            # NEW: Calculate effective score with decay (M3)
+            similarity = 1.0 - distance  # Convert distance to similarity
+            original_score = metadata.get("score", 0.0)
+            timestamp = metadata.get("timestamp", datetime.now().isoformat())
+
+            if self.decay_calculator:
+                effective_score = self.decay_calculator.calculate_effective_score(
+                    similarity=similarity,
+                    original_score=original_score,
+                    timestamp=timestamp,
+                )
+            else:
+                # Fallback: no decay
+                effective_score = similarity * (original_score / 10.0)
+
             memories.append(
                 {
                     "content": doc,
                     "topic": metadata.get("topic", ""),
-                    "score": metadata.get("score", 0.0),
-                    "timestamp": metadata.get("timestamp", ""),
+                    "score": original_score,
+                    "timestamp": timestamp,
                     "distance": distance,
+                    "similarity": similarity,
+                    "effective_score": effective_score,
                     "id": results["ids"][0][i],
                 }
             )
 
-        # Sort by score (descending)
-        memories.sort(key=lambda x: x["score"], reverse=True)
+        # Sort by effective score (descending) - this incorporates decay
+        memories.sort(key=lambda x: x["effective_score"], reverse=True)
 
         # Increment retrieval counts
         for memory in memories:
