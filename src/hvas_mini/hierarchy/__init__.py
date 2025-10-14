@@ -11,6 +11,7 @@ from hvas_mini.hierarchy.structure import AgentHierarchy, AgentNode
 from hvas_mini.hierarchy.coordinator import CoordinatorAgent
 from hvas_mini.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
 from hvas_mini.hierarchy.factory import create_hierarchical_agents
+from hvas_mini.hierarchy.executor import HierarchicalExecutor
 
 __all__ = [
     "AgentHierarchy",
@@ -20,4 +21,5 @@ __all__ = [
     "FactCheckerAgent",
     "StyleAgent",
     "create_hierarchical_agents",
+    "HierarchicalExecutor",
 ]
