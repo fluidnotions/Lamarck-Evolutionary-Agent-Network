@@ -4,9 +4,15 @@ State management for HVAS Mini.
 Defines the shared state structure used by LangGraph and all agents.
 """
 
-from typing import TypedDict, Dict, List, Optional
+from typing import TypedDict, Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+# Import hierarchy structure
+try:
+    from hvas_mini.hierarchy.structure import AgentHierarchy
+except ImportError:
+    AgentHierarchy = None
 
 
 class AgentMemory(BaseModel):
@@ -79,6 +85,43 @@ class BlogState(TypedDict):
     weight_history: List[Dict[str, float]]  # [{generation, agent, peer, weight, delta}]
 
 
+class AgentOutput(TypedDict):
+    """Output from an agent with metadata."""
+    content: str
+    confidence: float  # 0.0-1.0
+    metadata: Dict[str, Any]  # Additional context
+
+
+class HierarchicalState(BlogState):
+    """Extended state for hierarchical execution.
+
+    Adds fields for managing 3-layer hierarchy with coordinator,
+    content agents, and specialists.
+    """
+
+    # Hierarchy instance
+    hierarchy: Any  # AgentHierarchy type (avoid circular import)
+
+    # Execution tracking
+    current_layer: int  # Which layer is executing (1-3)
+    current_pass: int  # Which refinement pass (for M8)
+    max_passes: int  # Maximum refinement passes
+
+    # Layer outputs with confidence
+    layer_outputs: Dict[int, Dict[str, AgentOutput]]
+    # {1: {"coordinator": AgentOutput}, 2: {"intro": AgentOutput, ...}, 3: {...}}
+
+    # Coordinator state
+    coordinator_intent: str  # High-level parsed intent
+    coordinator_critique: Dict[str, str]  # {agent_role: feedback}
+    revision_requested: bool  # Whether refinement is needed
+    quality_threshold_met: bool  # Whether quality is acceptable
+
+    # Pass tracking for closed-loop refinement
+    pass_history: List[Dict[str, Any]]
+    # [{pass: 1, scores: {...}, outputs: {...}}, ...]
+
+
 def create_initial_state(topic: str) -> BlogState:
     """Create initial state for a new blog generation.
 
@@ -110,6 +153,34 @@ def create_initial_state(topic: str) -> BlogState:
         },
         weight_history=[],
     )
+
+
+def create_hierarchical_state(topic: str) -> HierarchicalState:
+    """Create initial hierarchical state for a new blog generation.
+
+    Args:
+        topic: The topic to write about
+
+    Returns:
+        Initialized HierarchicalState with empty hierarchical values
+    """
+    base_state = create_initial_state(topic)
+
+    # Add hierarchical fields
+    hierarchical_fields = {
+        "hierarchy": AgentHierarchy() if AgentHierarchy else None,
+        "current_layer": 0,
+        "current_pass": 1,
+        "max_passes": 3,
+        "layer_outputs": {1: {}, 2: {}, 3: {}},
+        "coordinator_intent": "",
+        "coordinator_critique": {},
+        "revision_requested": False,
+        "quality_threshold_met": False,
+        "pass_history": [],
+    }
+
+    return {**base_state, **hierarchical_fields}  # type: ignore
 
 
 def validate_state(state: BlogState) -> bool:
