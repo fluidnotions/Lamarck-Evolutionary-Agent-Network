@@ -69,24 +69,34 @@ Intent:"""
         response = await self.llm.ainvoke(prompt)
         return response.content
 
-    def distribute_context(self, state) -> Dict[str, str]:
+    def distribute_context(self, state, use_semantic_filtering: bool = True) -> Dict[str, str]:
         """Create context for each direct child.
 
-        For M6, this gives full intent to all children.
-        M9 will add semantic distance filtering.
+        With M9, uses semantic distance to filter context appropriately.
 
         Args:
             state: Current HierarchicalState
+            use_semantic_filtering: Whether to apply semantic distance filtering
 
         Returns:
             {child_role: context_for_child}
         """
+        from hvas_mini.hierarchy.semantic import compute_semantic_distance, filter_context_by_distance
+
         contexts = {}
         intent = state["coordinator_intent"]
 
         for child_role in self.hierarchy.get_children(self.role):
-            # Full intent for now (M9 will filter)
-            contexts[child_role] = intent
+            if use_semantic_filtering:
+                # Calculate semantic distance
+                distance = compute_semantic_distance(self.hierarchy, self.role, child_role)
+
+                # Filter context based on distance
+                filtered_context = filter_context_by_distance(intent, distance, min_ratio=0.3)
+                contexts[child_role] = filtered_context
+            else:
+                # Full context (M6/M7 behavior)
+                contexts[child_role] = intent
 
         return contexts
 
