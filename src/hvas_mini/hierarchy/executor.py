@@ -184,3 +184,140 @@ class HierarchicalExecutor:
             await self.execute_upward(state, layer)
 
         return state
+
+    async def execute_with_refinement(self, state: HierarchicalState) -> HierarchicalState:
+        """Execute with closed-loop refinement (M8).
+
+        Multi-pass execution with coordinator critique and revision:
+        - Executes full cycle (down + up)
+        - Coordinator critiques outputs
+        - If quality threshold not met, requests revision and repeats
+        - Early exit if quality threshold met or max passes reached
+
+        Args:
+            state: Current hierarchical state
+
+        Returns:
+            Updated state after refinement process
+        """
+        import os
+
+        for pass_num in range(1, state["max_passes"] + 1):
+            state["current_pass"] = pass_num
+
+            # Execute full cycle (downward + upward)
+            for layer in [1, 2, 3]:
+                await self.execute_downward(state, layer)
+
+            for layer in [3, 2, 1]:
+                await self.execute_upward(state, layer)
+
+            # Record pass results
+            pass_record = {
+                "pass": pass_num,
+                "scores": {
+                    role: state["layer_outputs"][2][role]["confidence"]
+                    for role in ["intro", "body", "conclusion"]
+                    if role in state["layer_outputs"][2]
+                }
+            }
+            state["pass_history"].append(pass_record)
+
+            # Critique and decide if revision needed
+            needs_revision = await self.critique_and_decide(state)
+
+            if not needs_revision:
+                state["quality_threshold_met"] = True
+                break
+
+            # Prepare for next pass if needed
+            if pass_num < state["max_passes"]:
+                await self.request_revision(state)
+
+        return state
+
+    async def critique_and_decide(self, state: HierarchicalState) -> bool:
+        """Critique outputs and decide if revision is needed.
+
+        Uses coordinator agent to critique each content agent's output.
+        Checks if average confidence meets quality threshold.
+
+        Args:
+            state: Current hierarchical state
+
+        Returns:
+            True if revision is needed, False if quality is sufficient
+        """
+        import os
+
+        # Get coordinator's critique
+        coordinator = self.agents.get("coordinator")
+        if coordinator:
+            critiques = coordinator.critique_outputs(state)
+            state["coordinator_critique"] = critiques
+
+        # Calculate average confidence from Layer 2 (content agents)
+        confidences = []
+        for role in ["intro", "body", "conclusion"]:
+            if role in state["layer_outputs"][2]:
+                confidences.append(state["layer_outputs"][2][role]["confidence"])
+
+        if not confidences:
+            return False  # No outputs to critique
+
+        avg_confidence = sum(confidences) / len(confidences)
+
+        # Check quality threshold
+        threshold = float(os.getenv("QUALITY_THRESHOLD", "0.8"))
+
+        if avg_confidence >= threshold:
+            return False  # Quality met, no revision needed
+
+        # Check if we have passes remaining
+        if state["current_pass"] >= state["max_passes"]:
+            return False  # No more attempts
+
+        return True  # Revision needed
+
+    async def request_revision(self, state: HierarchicalState):
+        """Generate specific revision feedback for content agents.
+
+        Creates detailed revision instructions based on coordinator critique.
+        Updates state to indicate revision is requested.
+
+        Args:
+            state: Current hierarchical state
+        """
+        state["revision_requested"] = True
+
+        for role in ["intro", "body", "conclusion"]:
+            if role not in state["coordinator_critique"]:
+                continue
+
+            critique = state["coordinator_critique"][role]
+
+            # Skip if already good quality
+            if "Good quality" in critique:
+                continue
+
+            # Get current output
+            if role not in state["layer_outputs"][2]:
+                continue
+
+            current_output = state["layer_outputs"][2][role]["content"]
+
+            # Generate detailed revision instruction
+            revision_prompt = f"""Revision needed for {role}:
+
+Issue: {critique}
+
+Original output:
+{current_output}
+
+Please revise to address the issues identified. Focus on improving:
+- Length and completeness
+- Structure and organization
+- Quality and coherence"""
+
+            # Store revision instruction for next pass
+            state["coordinator_critique"][role] = revision_prompt
