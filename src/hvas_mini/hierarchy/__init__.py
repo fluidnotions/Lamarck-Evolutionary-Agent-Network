@@ -12,6 +12,12 @@ from hvas_mini.hierarchy.coordinator import CoordinatorAgent
 from hvas_mini.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
 from hvas_mini.hierarchy.factory import create_hierarchical_agents
 from hvas_mini.hierarchy.executor import HierarchicalExecutor
+from hvas_mini.hierarchy.semantic import (
+    compute_semantic_distance,
+    filter_context_by_distance,
+    compute_context_weights,
+    get_contextual_relevance,
+)
 
 __all__ = [
     "AgentHierarchy",
@@ -22,4 +28,8 @@ __all__ = [
     "StyleAgent",
     "create_hierarchical_agents",
     "HierarchicalExecutor",
+    "compute_semantic_distance",
+    "filter_context_by_distance",
+    "compute_context_weights",
+    "get_contextual_relevance",
 ]
