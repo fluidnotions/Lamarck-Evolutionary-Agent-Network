@@ -118,6 +118,8 @@ class BaseAgent(ABC):
 
         # 6. Record timing
         agent_end = time.time()
+        if "agent_timings" not in state:
+            state["agent_timings"] = {}
         state["agent_timings"][self.role] = {
             "start": agent_start,
             "end": agent_end,
