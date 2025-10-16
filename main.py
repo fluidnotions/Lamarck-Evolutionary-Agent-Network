@@ -31,10 +31,44 @@ async def main():
     console.print("\n[bold cyan]HVAS Mini - Hierarchical Vector Agent System[/bold cyan]")
     console.print("Demonstrating learning across multiple generations\n")
 
+    # Track generation history for persistent display
+    generation_history = []
+
     for i, topic in enumerate(topics, 1):
-        console.print(f"\n{'='*60}")
-        console.print(f"[bold]Generation {i}: {topic}[/bold]")
-        console.print("=" * 60)
+        # Display persistent history summary at top
+        if generation_history:
+            console.print("\n" + "=" * 80)
+            console.print("[bold cyan]📊 GENERATION HISTORY[/bold cyan]")
+            console.print("=" * 80)
+
+            from rich.table import Table
+            history_table = Table(show_header=True, header_style="bold magenta")
+            history_table.add_column("#", style="dim", width=3)
+            history_table.add_column("Topic", style="cyan", width=30)
+            history_table.add_column("Intro", style="green", justify="center", width=6)
+            history_table.add_column("Body", style="green", justify="center", width=6)
+            history_table.add_column("Concl", style="green", justify="center", width=6)
+            history_table.add_column("Overall", style="yellow", justify="center", width=8)
+            history_table.add_column("Memories", style="blue", justify="center", width=10)
+
+            for idx, gen in enumerate(generation_history, 1):
+                topic_display = gen["topic"][:28] + "..." if len(gen["topic"]) > 28 else gen["topic"]
+                history_table.add_row(
+                    str(idx),
+                    topic_display,
+                    f"{gen['scores']['intro']:.1f}",
+                    f"{gen['scores']['body']:.1f}",
+                    f"{gen['scores']['conclusion']:.1f}",
+                    f"[bold]{gen['overall']:.1f}[/bold]",
+                    f"{gen['total_memories']}"
+                )
+
+            console.print(history_table)
+            console.print()
+
+        console.print(f"\n{'='*80}")
+        console.print(f"[bold]🚀 Generation {i}/{len(topics)}: {topic}[/bold]")
+        console.print("=" * 80)
 
         # Generate
         result = await pipeline.generate(topic)
@@ -47,15 +81,25 @@ async def main():
         console.print(f"\n[bold]Overall Score: {overall}/10[/bold]")
 
         # Show learning progress
+        stats = pipeline.get_memory_stats()
+        total_memories = sum(stat.get("total_memories", 0) for stat in stats.values())
+
         if i > 1:
             console.print("\n[bold cyan]📈 Learning Progress:[/bold cyan]")
-            stats = pipeline.get_memory_stats()
             for role, stat in stats.items():
-                total = stat["total_memories"]
+                total = stat.get("total_memories", 0)
                 avg = stat.get("avg_score", 0)
                 console.print(
                     f"  {role}: {total} memories | " f"avg quality: {avg:.1f}"
                 )
+
+        # Store this generation in history
+        generation_history.append({
+            "topic": topic,
+            "scores": result["scores"].copy(),
+            "overall": overall,
+            "total_memories": total_memories
+        })
 
         # Brief pause between generations
         await asyncio.sleep(1)
@@ -72,7 +116,7 @@ async def main():
     stats = pipeline.get_memory_stats()
     for role, stat in stats.items():
         console.print(f"\n  {role.upper()}:")
-        console.print(f"    Total memories: {stat['total_memories']}")
+        console.print(f"    Total memories: {stat.get('total_memories', 0)}")
         console.print(f"    Avg score: {stat.get('avg_score', 0):.1f}")
         console.print(f"    Total retrievals: {stat.get('total_retrievals', 0)}")
 
