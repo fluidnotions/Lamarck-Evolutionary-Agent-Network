@@ -6,9 +6,10 @@ Coordinates agents, evaluation, and evolution using LangGraph.
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-from typing import Dict, AsyncIterator
+from typing import Dict, AsyncIterator, Any
 import os
 from dotenv import load_dotenv
+import numpy as np
 
 load_dotenv()
 
@@ -54,6 +55,28 @@ class HVASMiniPipeline:
         # Build LangGraph
         self.app = self._build_graph()
 
+    @staticmethod
+    def _sanitize_state(obj: Any) -> Any:
+        """Convert numpy types to Python native types for serialization.
+
+        Args:
+            obj: Any object that might contain numpy types
+
+        Returns:
+            Object with numpy types converted to Python types
+        """
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {k: HVASMiniPipeline._sanitize_state(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return type(obj)(HVASMiniPipeline._sanitize_state(item) for item in obj)
+        return obj
+
     def _build_graph(self) -> StateGraph:
         """Construct LangGraph workflow with concurrent execution.
 
@@ -75,7 +98,7 @@ class HVASMiniPipeline:
         workflow.add_node("body_and_conclusion", self._concurrent_layer_2)
 
         # Layer 3: Evaluation (sequential - needs all content)
-        workflow.add_node("evaluate", self.evaluator)
+        workflow.add_node("evaluate", self._evaluate_wrapper)
 
         # Layer 4: Evolution (sequential)
         workflow.add_node("evolve", self._evolution_node)
@@ -113,6 +136,20 @@ class HVASMiniPipeline:
 
         return updated_state
 
+    def _evaluate_wrapper(self, state: BlogState) -> BlogState:
+        """Wrapper for evaluator that sanitizes numpy types.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            State with sanitized scores
+        """
+        state = self.evaluator(state)
+        # Sanitize scores to ensure they're Python floats
+        state["scores"] = self._sanitize_state(state["scores"])
+        return state
+
     async def _evolution_node(self, state: BlogState) -> BlogState:
         """Evolution node: update weights, store memories, and update parameters.
 
@@ -146,6 +183,9 @@ class HVASMiniPipeline:
             f"[Evolution] Weights updated ({len(weight_updates)} relationships), "
             f"memories stored, parameters evolved"
         )
+
+        # Sanitize state to convert numpy types before checkpointing
+        state = self._sanitize_state(state)
 
         return state
 
