@@ -1,151 +1,168 @@
-# HVAS Mini - Hierarchical Vector Agent System Prototype
+# HVAS Mini - A Research Exploration into Hierarchical Agent Learning
 
-A research prototype demonstrating **Hierarchical Vector Agent System (HVAS)** concepts using LangGraph, featuring concurrent AI agents with individual RAG memory, parameter evolution, and real-time learning visualization.
+> **"I have no idea if this will work, but that's the point of research."**
 
----
-
-## 🧠 Theory & Research Goals
-
-### What is HVAS?
-
-**Hierarchical Vector Agent System (HVAS)** is a research concept exploring how multiple AI agents can:
-
-1. **Maintain Individual Memory** - Each agent has its own vector database (RAG) for storing and retrieving successful patterns
-2. **Learn Through Evolution** - Agents adjust their parameters based on performance feedback
-3. **Work Concurrently** - Multiple agents execute in parallel or sequence with shared state
-4. **Demonstrate Emergent Behavior** - System-level learning emerges from individual agent improvements
-
-### Core Research Questions
-
-This prototype investigates:
-
-- **Memory Effectiveness**: Do agents with access to their own successful past outputs generate better content?
-- **Parameter Evolution**: Can agents learn optimal parameters (temperature, etc.) through score-based feedback?
-- **Transfer Learning**: Do memories from similar tasks improve performance on new tasks?
-- **Hierarchical Coordination**: How do specialized agents coordinate through shared state?
-
-### Key Concepts Demonstrated
-
-#### 1. **Individual Agent Memory (RAG)**
-
-Each agent maintains its own ChromaDB collection storing high-quality past outputs:
-
-```
-IntroAgent Memory:
-- Successful introductions (score ≥ 7.0)
-- Embedded with sentence-transformers
-- Retrieved by semantic similarity
-
-BodyAgent Memory:
-- Successful body sections
-- Retrieved based on topic similarity
-
-ConclusionAgent Memory:
-- Successful conclusions
-- Retrieved to guide future outputs
-```
-
-**Hypothesis**: Agents that retrieve relevant high-quality examples produce better outputs.
-
-#### 2. **Parameter Evolution**
-
-Agents evolve their parameters based on performance:
-
-```python
-if avg_score < 6.0:
-    # Poor performance → reduce randomness
-    temperature -= learning_rate
-elif avg_score > 8.0:
-    # Good performance → increase creativity
-    temperature += learning_rate
-```
-
-**Hypothesis**: Self-adjusting parameters lead to optimal performance over time.
-
-#### 3. **Hierarchical Orchestration**
-
-LangGraph coordinates agents with shared state:
-
-```
-State: {topic, intro, body, conclusion, scores, memories, parameters}
-  ↓
-IntroAgent → reads topic, writes intro
-  ↓
-BodyAgent → reads topic + intro, writes body
-  ↓
-ConclusionAgent → reads all, writes conclusion
-  ↓
-Evaluator → scores all sections
-  ↓
-Evolution → stores memories, updates parameters
-```
-
-**Hypothesis**: Sequential execution with context passing enables coherent multi-agent outputs.
-
-#### 4. **Learning Across Generations**
-
-System improves over multiple executions:
-
-```
-Generation 1: No memories → baseline performance
-Generation 2: Retrieves memories → improved output
-Generation 3: Better parameters → further improvement
-Generation N: Converges to optimal strategy
-```
-
-**Hypothesis**: Cumulative learning leads to measurable performance improvements.
+This is an experiment in getting AI agents to actually *learn* from their past successes—not through fine-tuning, not through prompting tricks, but through something closer to how we learn: by remembering what worked before and applying it to similar problems later.
 
 ---
 
-## 🏗️ Architecture
+## The Core Question
 
-### System Components
+**Can AI agents with their own memory and the ability to self-adjust become measurably better at tasks over time?**
 
-```
-┌─────────────────────────────────────────┐
-│      LangGraph Orchestrator             │
-│      (StateGraph + Streaming)           │
-└────────────┬────────────────────────────┘
-             │
-    ┌────────┼────────┬─────────┐
-    │        │        │         │
-┌───▼──┐ ┌──▼───┐ ┌──▼───┐ ┌──▼────┐
-│Intro │ │Body  │ │Concl │ │Eval & │
-│Agent │ │Agent │ │Agent │ │Evolve │
-└───┬──┘ └──┬───┘ └──┬───┘ └───────┘
-    │       │        │
-    ▼       ▼        ▼
-[ChromaDB] [ChromaDB] [ChromaDB]
-```
-
-### Technology Stack
-
-- **LangGraph**: Workflow orchestration and streaming
-- **LangChain**: LLM integration (Anthropic Claude)
-- **ChromaDB**: Vector database for RAG memory
-- **sentence-transformers**: Text embeddings
-- **Rich**: Terminal visualization
-- **Pydantic**: Type-safe state management
-- **uv**: Fast Python package management
+Not "better" in the sense of more tokens or more context. Better in the sense of: *"Last time I wrote an intro like this, it scored 9/10, so let me try that pattern again."*
 
 ---
 
-## 🚀 Quick Start
+## The Thinking Process
 
-### Prerequisites
+### The Problem I'm Exploring
 
-- Python 3.11+
-- Anthropic API key
-- uv package manager
+Traditional AI agent systems are stateless. Every run starts from scratch. They're like amnesiacs—brilliant, articulate amnesiacs who forget everything the moment the conversation ends.
 
-### Installation
+But what if they could remember? Not just cache responses, but actually:
+1. Store what worked well (based on measurable outcomes)
+2. Retrieve relevant past successes when facing similar tasks
+3. Adjust their behavior based on performance feedback
+
+### The Hypothesis (That Might Be Wrong)
+
+If each agent maintains its own memory of successful outputs (RAG-style) and can evolve its parameters based on performance scores, we should see:
+- **Transfer learning**: Performance improvements on similar (not identical) tasks
+- **Emergent optimization**: Self-adjusting parameters converging to optimal values
+- **Specialization**: Each agent developing its own "style" based on what works for it
+
+*Could be complete bullshit. That's what the experiment is for.*
+
+### Why Hierarchical?
+
+Because flat peer-to-peer pipelines don't reflect how actual work gets done. Real systems have structure:
+- A **coordinator** that understands the high-level goal
+- **Content specialists** that handle major pieces
+- **Domain experts** that provide specialized input
+
+The hierarchy allows for:
+- **Context distribution**: High-level intent flows down
+- **Result aggregation**: Detailed outputs bubble up
+- **Iterative refinement**: The coordinator can request revisions based on quality gates
+- **Semantic filtering**: Agents receive context weighted by relevance to their role
+
+Again, this might not work. But it's worth exploring.
+
+---
+
+## What Actually Happens
+
+### The 3-Layer Architecture
+
+```
+Layer 1: Coordinator
+         ├─ Parses intent
+         ├─ Distributes context to children
+         ├─ Critiques output quality
+         └─ Requests revisions if needed
+              ↓ context flows down
+Layer 2: Content Agents (Intro, Body, Conclusion)
+         ├─ Receive filtered context from coordinator
+         ├─ Generate their section
+         ├─ Query specialists for expertise
+         └─ Aggregate specialist input
+              ↓ context flows down
+Layer 3: Specialists (Researcher, Fact-Checker, Stylist)
+         ├─ Provide deep domain expertise
+         ├─ No children (leaf nodes)
+         └─ Results flow back up
+              ↑ results aggregate up
+```
+
+### The Learning Cycle
+
+For each agent, each generation:
+1. **Retrieve**: Query its own memory bank for past successful outputs (semantic similarity)
+2. **Generate**: Create content informed by those examples + weighted context from parent
+3. **Evaluate**: Get scored (0-10) on multiple quality factors
+4. **Store**: If score ≥ 7.0, save this output as a new example for future use
+5. **Evolve**: Adjust parameters (temperature, etc.) based on rolling performance average
+
+### Multi-Pass Refinement
+
+The coordinator can run multiple passes (up to 3 by default):
+- First pass: Generate initial content
+- Coordinator critiques: "Body is too short", "Intro lacks hook"
+- Second pass: Content agents revise based on feedback
+- If quality threshold met (avg confidence ≥ 0.8): Stop early
+- Otherwise: Continue up to max passes
+
+### Semantic Distance Weighting
+
+Not all context is equally relevant. The system uses hand-crafted semantic vectors to:
+- Calculate "distance" between agents (e.g., researcher is close to fact-checker, far from stylist)
+- Filter context based on distance (closer = more context shared)
+- Weight aggregation by semantic relevance
+
+*Is this the right approach? Don't know yet. Testing it.*
+
+---
+
+## The Experiment
+
+The demo runs 5 blog post generations:
+1. **"introduction to machine learning"** - Baseline (no memories yet)
+2. **"machine learning applications"** - Similar topic (should reuse memories from #1)
+3. **"python programming basics"** - New topic (different domain)
+4. **"python for data science"** - Similar to #3 (should reuse those memories)
+5. **"artificial intelligence ethics"** - New topic
+
+**What I'm looking for**:
+- Do topics 2 and 4 score higher than topics 1 and 3? (Transfer learning)
+- Do agent parameters (temperature) converge to stable values? (Emergent optimization)
+- Do memory retrieval counts correlate with better outputs? (Memory effectiveness)
+
+**Expected Results**:
+- ~0.5-1.0 point score improvement on similar topics (if the hypothesis holds)
+- Temperature values stabilizing after 3-4 generations
+- Memory banks accumulating 2-4 high-quality examples per agent
+
+**If it doesn't work**:
+- Maybe the scoring heuristics are bad
+- Maybe semantic vectors are nonsense
+- Maybe the whole concept is flawed
+
+That's fine. That's research.
+
+---
+
+## Why This Matters (If It Works)
+
+If agents can demonstrably learn from experience:
+- **Cheaper**: Less need for massive context windows stuffed with examples
+- **Faster**: Retrieval from vector DB is faster than processing 50k token prompts
+- **Specialized**: Each agent develops domain-specific expertise
+- **Adaptive**: System improves with use, not just with retraining
+
+But these are hypotheticals. The prototype is designed to test if the core mechanisms even function.
+
+---
+
+## Technology Stack
+
+*For those who care about the implementation:*
+
+- **LangGraph**: Workflow orchestration (bidirectional flows, state management)
+- **Anthropic Claude**: LLM for content generation
+- **ChromaDB**: Vector database for RAG memory (separate collection per agent)
+- **sentence-transformers**: Text embeddings for semantic similarity
+- **Rich**: Terminal UI for watching the learning happen in real-time
+
+---
+
+## Running It Yourself
 
 ```bash
-# Clone repository
-cd hvas-mini
-
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Prerequisites
+# - Python 3.11+
+# - Anthropic API key
+# - uv package manager
 
 # Install dependencies
 uv sync
@@ -153,345 +170,190 @@ uv sync
 # Setup environment
 cp .env.example .env
 # Edit .env and add your ANTHROPIC_API_KEY
-```
 
-### Running the Demo
-
-```bash
-# Run the demo with 5 topic generations
+# Run the experiment
 uv run python main.py
 ```
 
-Expected output:
+You'll see:
 - Live visualization of agent execution
-- Memory retrieval logs
-- Parameter evolution tracking
-- Performance scores for each section
-- Final statistics showing learning
+- Memory retrieval logs (when agents pull past examples)
+- Quality scores for each generation
+- Parameter evolution (temperature changes)
+- Final statistics showing whether learning occurred
+
+Expected runtime: ~5-10 minutes (5 generations × 3 agents + multi-pass refinement)
 
 ---
 
-## 📊 Experiment Design
+## What to Look For
 
-### Default Demo Experiment
+### Metrics to Watch
 
-The `main.py` demo runs an experiment with 5 topics:
+1. **Score Progression**: Do later similar topics score higher?
+2. **Memory Accumulation**: Does each agent build up a library of successful patterns?
+3. **Parameter Convergence**: Do temperatures stop bouncing around?
+4. **Retrieval Patterns**: Are memories actually being reused?
+5. **Confidence Trends**: Does the system become more confident over time?
 
-```python
-topics = [
-    "introduction to machine learning",     # Gen 1: Baseline
-    "machine learning applications",        # Gen 2: Similar (memory reuse)
-    "python programming basics",            # Gen 3: New topic
-    "python for data science",              # Gen 4: Similar (memory reuse)
-    "artificial intelligence ethics"        # Gen 5: New topic
-]
-```
+### The Real Test
 
-### Metrics Tracked
+After generation 5, compare:
+- **Topic 1 score vs Topic 2 score** (ML baseline vs ML with memory)
+- **Topic 3 score vs Topic 4 score** (Python baseline vs Python with memory)
 
-1. **Content Quality Scores** (0-10 scale)
-   - Introduction: hooks, relevance, length
-   - Body: detail, structure, examples
-   - Conclusion: summary, CTA, coherence
-
-2. **Memory Statistics**
-   - Total memories stored per agent
-   - Average quality of memories
-   - Retrieval frequency
-
-3. **Parameter Evolution**
-   - Temperature changes over time
-   - Score trends per agent
-   - Convergence behavior
-
-### Expected Results
-
-After 5 generations, you should observe:
-
-- **Memory Accumulation**: Each agent stores 2-4 high-quality memories
-- **Score Improvement**: Later similar topics score ~0.5-1.0 points higher
-- **Parameter Stability**: Temperatures converge to optimal ranges
-- **Retrieval Effectiveness**: Agents retrieve 1-3 relevant memories per generation
+If Topic 2 and Topic 4 consistently score higher, the hypothesis has legs. If not, back to the drawing board.
 
 ---
 
-## 🎯 Use Cases & Extensions
+## Limitations & Unknowns
 
-### Current Implementation: Blog Generation
+I'm deliberately keeping this simple to isolate what works and what doesn't:
 
-- Three specialized agents (intro, body, conclusion)
-- Content evaluation based on structure and quality
-- Learning to write better blog posts over time
+**Known Limitations**:
+- Heuristic scoring (not LLM-based evaluation)
+- Hand-crafted semantic vectors (not learned)
+- Small memory banks (no forgetting mechanism yet)
+- Fixed 3-layer hierarchy (not dynamic)
 
-### Potential Extensions
+**Unknown Unknowns**:
+- Does semantic distance actually help, or is it just noise?
+- Is 7.0 the right memory threshold, or should it be 8.0? 6.0?
+- Are 3 passes enough for refinement, or should it be adaptive?
+- Do the semantic vectors reflect actual semantic relationships?
 
-1. **Code Generation**
-   - Agents: architect, implementer, tester
-   - Memory: successful code patterns
-   - Evolution: code quality metrics
-
-2. **Research Synthesis**
-   - Agents: summarizer, analyzer, synthesizer
-   - Memory: effective summaries
-   - Evolution: comprehension metrics
-
-3. **Creative Writing**
-   - Agents: plot, characters, dialogue
-   - Memory: engaging story elements
-   - Evolution: reader engagement scores
-
-4. **Data Analysis**
-   - Agents: cleaner, analyzer, visualizer
-   - Memory: effective analysis approaches
-   - Evolution: insight quality metrics
+These are research questions, not bugs. The prototype is designed to make these questions testable.
 
 ---
 
-## 🔧 Configuration
+## What's Next
 
-### Environment Variables
+If the core mechanisms show promise:
+1. **LLM-based evaluation**: Replace heuristics with actual quality assessment
+2. **Learned semantic vectors**: Replace hand-crafted vectors with learned embeddings
+3. **Memory consolidation**: Add forgetting, clustering, importance weighting
+4. **Dynamic hierarchy**: Let agents spawn specialists on demand
+5. **Cross-agent memory**: Selective sharing of successful patterns
+6. **Real-world tasks**: Move beyond blog generation to code, research, analysis
 
-```bash
-# LLM Configuration
-MODEL_NAME=claude-3-haiku-20240307  # or claude-3-5-sonnet-20241022
-BASE_TEMPERATURE=0.7
-
-# Memory Configuration
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-MEMORY_SCORE_THRESHOLD=7.0  # Only store high-quality outputs
-MAX_MEMORIES_RETRIEVE=3
-
-# Evolution Configuration
-ENABLE_PARAMETER_EVOLUTION=true
-EVOLUTION_LEARNING_RATE=0.1
-MIN_TEMPERATURE=0.5
-MAX_TEMPERATURE=1.0
-
-# Visualization
-ENABLE_VISUALIZATION=true
-SHOW_MEMORY_RETRIEVAL=true
-SHOW_PARAMETER_CHANGES=true
-```
-
-### Customization Points
-
-1. **Evaluation Metrics** (`src/hvas_mini/evaluation.py`)
-   - Modify scoring functions
-   - Adjust score thresholds
-   - Add new quality factors
-
-2. **Evolution Strategy** (`src/hvas_mini/evolution.py`)
-   - Change temperature adjustment logic
-   - Add new evolvable parameters
-   - Implement different learning rates
-
-3. **Agent Prompts** (`src/hvas_mini/agents.py`)
-   - Customize prompts for each agent
-   - Adjust memory example formatting
-   - Add context from other sources
-
-4. **Workflow** (`src/hvas_mini/pipeline.py`)
-   - Modify agent execution order
-   - Add parallel execution branches
-   - Insert additional processing nodes
+But first, does the basic loop even work? That's what this prototype tests.
 
 ---
 
-## 📁 Project Structure
+## For Potential Team Members
+
+If you're reading this because you're considering joining:
+
+**What I value**:
+- Intellectual honesty (saying "I don't know" is encouraged)
+- First-principles thinking (challenging assumptions, not just optimizing)
+- Experimental rigor (testing hypotheses, not just building features)
+- Willingness to fail (most research leads nowhere, and that's fine)
+
+**What this project is**:
+- An experiment in agent learning mechanics
+- A testbed for measuring whether certain intuitions hold up
+- A learning environment (I'm learning, you'd be learning, we'd all be learning)
+
+**What this project isn't**:
+- A production system (it's deliberately simplified)
+- A sure thing (it might all be wrong)
+- A well-defined roadmap (research doesn't work that way)
+
+If that sounds interesting, the codebase is designed to be hackable. Dive in, break things, test ideas.
+
+---
+
+## Project Structure
 
 ```
 hvas-mini/
-├── main.py                      # Main entry point and demo
-├── pyproject.toml               # uv configuration
-├── .env.example                 # Environment template
-├── README.md                    # This file
-├── WORK_DIVISION.md            # Implementation plan
-├── spec.md                      # Technical specification
-│
-├── src/hvas_mini/              # Main package
-│   ├── __init__.py
-│   ├── state.py                # State definitions (BlogState, AgentMemory)
-│   ├── memory.py               # MemoryManager (ChromaDB + RAG)
-│   ├── agents.py               # BaseAgent + specialized agents
-│   ├── evolution.py            # Parameter evolution logic
-│   ├── evaluation.py           # ContentEvaluator
-│   ├── visualization.py        # StreamVisualizer (Rich UI)
-│   └── pipeline.py             # HVASMiniPipeline (LangGraph)
-│
-├── data/                        # Runtime data (gitignored)
-│   └── memories/               # ChromaDB persistence
-│
-├── logs/                        # Execution logs (gitignored)
-│   └── runs/
-│
-├── docs/                        # Customization guides
-│   ├── extending-agents.md
-│   ├── custom-evaluation.md
-│   └── langgraph-patterns.md
-│
-├── worktrees/                   # Feature branch worktrees (gitignored)
-│   ├── project-foundation/
-│   ├── state-management/
-│   ├── memory-system/
-│   ├── base-agent/
-│   ├── specialized-agents/
-│   ├── evaluation-system/
-│   ├── visualization/
-│   └── langgraph-orchestration/
-│
-└── tests/                       # Test files
-    ├── test_state.py
-    ├── test_memory.py
-    ├── test_agents.py
-    ├── test_evaluation.py
-    ├── test_visualization.py
-    ├── test_pipeline.py
-    └── test_integration.py
+├── main.py                          # Entry point: runs the 5-generation experiment
+├── src/hvas_mini/                   # Core implementation
+│   ├── state.py                     # State definitions
+│   ├── memory.py                    # RAG memory manager (ChromaDB wrapper)
+│   ├── agents.py                    # Base agent + specialized agents
+│   ├── evaluation.py                # Content scoring (the heuristics we're testing)
+│   ├── evolution.py                 # Parameter adjustment logic
+│   ├── visualization.py             # Terminal UI
+│   ├── pipeline.py                  # LangGraph orchestration
+│   └── hierarchy/                   # Hierarchical structure implementation
+│       ├── structure.py             # 3-layer hierarchy definition
+│       ├── coordinator.py           # Layer 1: Coordinator agent
+│       ├── specialists.py           # Layer 3: Specialist agents
+│       ├── executor.py              # Bidirectional flow execution
+│       └── semantic.py              # Semantic distance calculations
+├── tests/                           # Test suite
+└── docs/                            # Implementation notes
 ```
 
 ---
 
-## 🧪 Testing
+## Configuration
+
+Key knobs you can turn (`.env` file):
+
+```bash
+# Memory threshold: How good does output need to be to remember it?
+MEMORY_SCORE_THRESHOLD=7.0    # 0-10 scale
+
+# Evolution: How aggressively do agents adjust their parameters?
+EVOLUTION_LEARNING_RATE=0.1   # 0.0-1.0
+
+# Quality threshold: When does multi-pass refinement stop early?
+QUALITY_THRESHOLD=0.8         # 0.0-1.0
+
+# Max passes: How many refinement iterations before giving up?
+MAX_PASSES=3                  # Default
+
+# Base temperature: Starting point for all agents
+BASE_TEMPERATURE=0.7          # 0.0-1.0
+```
+
+Tweak these and see what breaks (or improves).
+
+---
+
+## Testing
 
 ```bash
 # Run all tests
 uv run pytest
 
 # Run specific test file
-uv run pytest tests/test_agents.py -v
+uv run pytest tests/test_hierarchical_structure.py -v
 
 # Run with coverage
 uv run pytest --cov=src/hvas_mini
-
-# Run integration tests only
-uv run pytest -m integration
-
-# Type checking
-uv run mypy src/hvas_mini
 ```
 
----
-
-## 📈 Observing Learning
-
-### Metrics to Watch
-
-1. **Memory Growth**: Track how many memories each agent accumulates
-2. **Score Trends**: Plot scores over generations for each agent
-3. **Parameter Convergence**: Watch temperatures stabilize
-4. **Retrieval Patterns**: See which memories get reused most
-
-### Example Analysis
-
-After running the demo, check:
-
-```bash
-# Memory statistics in ChromaDB
-ls -lh data/memories/
-
-# Agent parameters in output
-# Look for temperature changes
-
-# Score progression
-# Compare Generation 1 vs Generation 5 scores
-```
+Tests cover:
+- Hierarchy structure (parent-child relationships, layer organization)
+- Bidirectional flow (context distribution, result aggregation)
+- Closed-loop refinement (multi-pass execution, quality gates)
+- Semantic distance (vector calculations, context filtering)
+- Memory operations (storage, retrieval, thresholds)
+- Parameter evolution (temperature adjustments, convergence)
 
 ---
 
-## 🤝 Contributing
+## Documentation
 
-This is a research prototype. Areas for exploration:
-
-1. **Alternative Evolution Strategies**
-   - Genetic algorithms
-   - Reinforcement learning
-   - Multi-objective optimization
-
-2. **Memory Enhancements**
-   - Memory consolidation
-   - Forgetting mechanisms
-   - Cross-agent memory sharing
-
-3. **Evaluation Improvements**
-   - LLM-based evaluation
-   - Human feedback integration
-   - Multi-criteria scoring
-
-4. **Visualization**
-   - Web dashboard
-   - Interactive exploration
-   - Learning curves
+- **`CLAUDE.md`**: Guide for AI assistants working on this codebase
+- **`docs/`**: Implementation patterns and customization guides
 
 ---
 
-## 📚 Documentation
+## Final Thoughts
 
-- **[spec.md](spec.md)**: Complete technical specification
-- **[WORK_DIVISION.md](WORK_DIVISION.md)**: Implementation breakdown
-- **[docs/](docs/)**: Customization guides (see below)
+This is research, not engineering. The goal isn't to build a polished product—it's to test whether a set of ideas about agent learning hold up under scrutiny.
 
----
+Maybe it works. Maybe it doesn't. Either way, we'll learn something.
 
-## 🔒 LangGraph Patterns Used
+**Questions? Suggestions? Think I'm completely wrong?**
 
-This prototype demonstrates several LangGraph patterns:
-
-1. **StateGraph with TypedDict**: Type-safe state management
-2. **Async Nodes**: Parallel execution capability
-3. **Streaming with `astream()`**: Real-time updates
-4. **Checkpointing with MemorySaver**: Execution history
-5. **Custom Node Functions**: `_evolution_node` for post-processing
-
-See `docs/langgraph-patterns.md` for detailed explanations.
+Open an issue. Let's discuss.
 
 ---
 
-## ⚠️ Limitations
-
-- **Single-threaded**: Agents execute sequentially (not truly parallel)
-- **Naive Evaluation**: Simple heuristic scoring (not LLM-based)
-- **No Forgetting**: Memories accumulate indefinitely
-- **Fixed Workflow**: Graph structure is static
-- **Limited Context**: Each agent only sees its own memories
-
-These are intentional simplifications for the prototype. See docs for how to address them.
-
----
-
-## 📝 License
-
-MIT License - See LICENSE file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **LangGraph** by LangChain for workflow orchestration
-- **Anthropic** for Claude API
-- **ChromaDB** for vector storage
-- **Rich** by Will McGugan for beautiful terminal UI
-
----
-
-## 📧 Contact
-
-For questions about the research or implementation, please open an issue in the repository.
-
----
-
-## 🎓 Citation
-
-If you use this prototype in your research, please cite:
-
-```bibtex
-@software{hvas_mini_2024,
-  title={HVAS Mini: Hierarchical Vector Agent System Prototype},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/yourusername/hvas-mini}
-}
-```
-
----
-
-**Happy Researching! 🚀🧠**
+**Happy Exploring. 🧠🔬**

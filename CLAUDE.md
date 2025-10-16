@@ -4,355 +4,179 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**HVAS Mini** is a research prototype demonstrating Hierarchical Vector Agent System concepts. It features multiple AI agents that:
-- Maintain individual RAG memory (ChromaDB) for storing successful outputs
-- Evolve parameters (temperature) based on performance scores
-- Coordinate through LangGraph's StateGraph workflow
-- Learn across generations by retrieving and reusing past successful patterns
+**HVAS Mini** is a research prototype exploring whether AI agents can learn from experience through:
+- Individual RAG memory (ChromaDB) for storing successful outputs
+- Parameter evolution (temperature) based on performance scores
+- Hierarchical coordination through a 3-layer structure
+- Multi-pass refinement with quality gates
+- Semantic distance-based context filtering
 
-**Core Research Question**: Can agents with individual memory and parameter evolution demonstrate measurable learning improvements across similar tasks?
+**Core Research Question**: Can agents with individual memory and self-evolution demonstrate measurable learning improvements across similar tasks?
 
-## Iteration Implementation Workflow
+## Current Architecture
 
-When given a new iteration outline or feature request, follow this structured workflow:
+### 3-Layer Hierarchy
 
-### 1. Analyze & Plan
-
-```bash
-# Read the iteration outline (e.g., NEXT_ITERATION_OUTLINE.md or spec.md)
-# Analyze in terms of current architecture:
-# - What components need modification?
-# - What new components are needed?
-# - What are the dependencies between changes?
+```
+Layer 1: Coordinator
+         ├─ Parses high-level intent
+         ├─ Distributes filtered context to children
+         ├─ Critiques output quality
+         └─ Requests revisions when quality below threshold
+              ↓ context flows down
+Layer 2: Content Agents (Intro, Body, Conclusion)
+         ├─ Generate their section with context from coordinator
+         ├─ Query specialist children for expertise
+         └─ Aggregate specialist outputs
+              ↓ context flows down
+Layer 3: Specialists (Researcher, Fact-Checker, Stylist)
+         ├─ Provide deep domain expertise
+         ├─ No children (leaf nodes)
+         └─ Results bubble up to parents
+              ↑ results aggregate up
 ```
 
-Create a work division document (e.g., `WORK_DIVISION.md`) that:
-- Breaks work into feature branches based on dependencies
-- Identifies parallel vs sequential work
-- Creates a dependency graph
+### Key Features
 
-**Example dependency structure**:
-```
-foundation (blocking)
-  ├── feature-a (parallel)
-  └── feature-b (parallel)
-      └── integration (depends on a + b)
-```
+**Bidirectional Flow** (M7):
+- Context flows down from parent to children
+- Results aggregate up from children to parent
+- Confidence-weighted aggregation
 
-### 2. Create Git Worktrees
+**Closed-Loop Refinement** (M8):
+- Multi-pass execution (up to 3 passes by default)
+- Coordinator critique after each pass
+- Early exit when quality threshold met (avg confidence ≥ 0.8)
+- Revision requests with specific feedback
 
-```bash
-# Create worktrees for each feature branch
-git worktree add worktrees/feature-name -b feature/feature-name
+**Semantic Distance Weighting** (M9):
+- Hand-crafted semantic vectors for each agent
+- Cosine distance calculation between agents
+- Context filtering based on semantic relevance
+- Closer agents share more context
 
-# Repeat for all branches
-git worktree add worktrees/another-feature -b feature/another-feature
-```
+### The Learning Loop
 
-### 3. Create AGENT_TASK.md in Each Worktree
+Each agent, each generation:
+1. **Retrieve**: Query own ChromaDB collection for past successful outputs (semantic similarity to topic)
+2. **Generate**: Create content informed by retrieved memories + weighted context from parent
+3. **Evaluate**: Get scored (0-10) by ContentEvaluator heuristics
+4. **Store**: If score ≥ `MEMORY_SCORE_THRESHOLD` (default 7.0), persist to ChromaDB
+5. **Evolve**: Adjust temperature based on rolling average of last 5 scores
 
-In each worktree root, create `AGENT_TASK.md`:
+## Module Responsibilities
 
-```markdown
-# Agent Task: Feature Name
+### Core Modules
 
-## Branch: `feature/feature-name`
+- **`state.py`**: `BlogState` TypedDict (LangGraph state), `AgentMemory` Pydantic model, `HierarchicalState` (extends BlogState with hierarchy fields)
+- **`memory.py`**: `MemoryManager` - ChromaDB wrapper (store, retrieve, stats), `DecayCalculator` (M3), `MemoryPruner` (M3)
+- **`agents.py`**: `BaseAgent` abstract class, `IntroAgent`, `BodyAgent`, `ConclusionAgent`, `create_agents()` factory
+- **`evaluation.py`**: `ContentEvaluator` - multi-factor heuristic scoring
+- **`evolution.py`**: Temperature adjustment utilities
+- **`visualization.py`**: `StreamVisualizer` - Rich terminal UI
+- **`pipeline.py`**: `HVASMiniPipeline` - LangGraph StateGraph orchestration
 
-## Priority: HIGH/MEDIUM/LOW
+### Hierarchy Modules (`src/hvas_mini/hierarchy/`)
 
-## Execution: SEQUENTIAL/PARALLEL (with what?)
-
-## Objective
-Clear description of what needs to be implemented.
-
-## Dependencies
-- ✅ feature/prerequisite-branch (must be merged first)
-
-## Tasks
-
-### 1. Specific Task
-Detailed implementation instructions with code examples.
-
-### 2. Another Task
-More details...
-
-## Deliverables Checklist
-- [ ] File 1 created with X functionality
-- [ ] File 2 created with Y functionality
-- [ ] Tests passing
-
-## Acceptance Criteria
-1. ✅ Criterion 1
-2. ✅ Criterion 2
-
-## Testing
-```bash
-# How to test this feature
-uv run pytest tests/test_feature.py
-```
-
-## Next Steps
-After completion, can merge to main and proceed with...
-```
-
-**Key**: AGENT_TASK.md at worktree root serves as implementation guide.
-
-### 4. Implement in Worktrees
-
-Implement code in each worktree following AGENT_TASK.md instructions:
-
-```bash
-cd worktrees/feature-name
-# Create files, write code, create tests
-# Work can happen in parallel across worktrees
-```
-
-### 5. Commit Implementation
-
-```bash
-cd worktrees/feature-name
-git add -A
-git commit -m "Implement feature-name: Brief description
-
-- Detail 1
-- Detail 2
-- Detail 3
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-### 6. Move AGENT_TASK.md to docs/ (Critical!)
-
-**Before final merge**, move AGENT_TASK.md to avoid merge conflicts:
-
-```bash
-cd worktrees/feature-name
-mkdir -p docs/feature-name
-git mv AGENT_TASK.md docs/feature-name/
-git commit -m "Move AGENT_TASK.md to docs/feature-name to avoid merge conflicts"
-```
-
-**Why?** Every branch has an AGENT_TASK.md at root. Without this step, merging causes conflicts.
-
-### 7. Merge or Push for PR
-
-**Option A: Merge to main**
-```bash
-cd /path/to/main/repo
-git merge feature/feature-name -m "Merge feature-name"
-# Resolve any remaining conflicts
-# Repeat for all branches in dependency order
-```
-
-**Option B: Push for PR**
-```bash
-cd worktrees/feature-name
-git push -u origin feature/feature-name
-# Create PR on GitHub/GitLab
-# Repeat for all branches
-```
-
-### Dependency-Aware Merging
-
-When merging, respect dependencies:
-
-```bash
-# Phase 1: Foundation (blocking - must be first)
-git merge feature/foundation
-
-# Phase 2: Parallel features (can merge in any order)
-git merge feature/feature-a
-git merge feature/feature-b
-
-# Phase 3: Integration (after all prerequisites)
-git merge feature/integration
-```
-
-### Workflow Tips
-
-- **Concurrent Implementation**: Work on multiple worktrees simultaneously when there are no dependencies
-- **AGENT_TASK.md**: Keep implementation details specific (code snippets, file structures, test requirements)
-- **Commit Early**: Commit to branch before moving AGENT_TASK.md
-- **Test Before Merge**: Run tests in each worktree before merging
-- **Clean Merges**: The docs/<branch-name>/ pattern ensures AGENT_TASK.md files don't conflict
-
-### Worktree Management
-
-```bash
-# List all worktrees
-git worktree list
-
-# Remove a worktree (after merging)
-git worktree remove worktrees/feature-name
-
-# Prune deleted worktrees
-git worktree prune
-```
+- **`structure.py`**: `AgentHierarchy` class - defines 3-layer parent-child relationships, semantic vectors
+- **`coordinator.py`**: `CoordinatorAgent` (Layer 1) - intent parsing, context distribution with semantic filtering, critique generation
+- **`specialists.py`**: `ResearchAgent`, `FactCheckerAgent`, `StyleAgent` (Layer 3) - leaf nodes with specialized prompts
+- **`executor.py`**: `HierarchicalExecutor` - manages bidirectional flow, multi-pass refinement, confidence estimation
+- **`semantic.py`**: Semantic distance functions (cosine similarity, context filtering, weight computation)
+- **`factory.py`**: `create_hierarchical_agents()` - instantiates all 7 agents with hierarchy
 
 ## Build & Run Commands
 
 ```bash
-# Install dependencies (uses uv package manager)
+# Install dependencies
 uv sync
 
-# Run the main demo (generates 5 blog posts, shows learning)
+# Run main demo (5 topics, shows learning)
 uv run python main.py
 
 # Run tests
-uv run pytest                          # All tests
-uv run pytest tests/test_agents.py -v  # Specific test file
-uv run pytest -m integration           # Integration tests only
-uv run pytest --cov=src/hvas_mini      # With coverage
+uv run pytest                              # All tests
+uv run pytest tests/test_hierarchical_structure.py -v  # Specific file
+uv run pytest --cov=src/hvas_mini          # With coverage
 
 # Type checking
 uv run mypy src/hvas_mini
-
-# Import verification (after uv sync)
-uv run python test_imports.py
 ```
 
 ## Environment Setup
 
 1. Copy `.env.example` to `.env`
-2. Add your `ANTHROPIC_API_KEY`
-3. Key configuration knobs:
-   - `MEMORY_SCORE_THRESHOLD=7.0` - Only memories scoring ≥7.0 are stored
+2. Add `ANTHROPIC_API_KEY`
+3. Key configuration:
+   - `MEMORY_SCORE_THRESHOLD=7.0` - Only store outputs scoring ≥7.0
    - `BASE_TEMPERATURE=0.7` - Starting temperature for all agents
-   - `EVOLUTION_LEARNING_RATE=0.1` - How aggressively parameters evolve
-   - `ENABLE_VISUALIZATION=true` - Show Rich terminal UI during execution
-
-## Architecture: The Big Picture
-
-### State Flow Through LangGraph
-
-The system uses **LangGraph's StateGraph** with a sequential workflow:
-
-```
-BlogState (TypedDict) →
-  IntroAgent → writes state["intro"]
-    ↓
-  BodyAgent → reads state["intro"], writes state["body"]
-    ↓
-  ConclusionAgent → reads state["intro"] + state["body"], writes state["conclusion"]
-    ↓
-  ContentEvaluator → reads all content, writes state["scores"]
-    ↓
-  _evolution_node → stores memories if score ≥ threshold, updates agent.parameters
-```
-
-**Critical**: `BlogState` is the **single source of truth** passed between all nodes. Agents don't directly communicate—they coordinate through shared state.
-
-### The Learning Loop
-
-Each agent goes through this cycle **per generation**:
-
-1. **Retrieve**: Query ChromaDB for semantically similar past outputs (using topic as query)
-2. **Generate**: Create content with current `temperature`, informed by retrieved memories
-3. **Evaluate**: ContentEvaluator scores output (0-10 scale, multi-factor heuristics)
-4. **Store**: If score ≥ `MEMORY_SCORE_THRESHOLD`, store in ChromaDB with embeddings
-5. **Evolve**: Adjust temperature based on rolling average of last 5 scores:
-   - avg < 6.0 → decrease temperature (reduce randomness)
-   - avg > 8.0 → increase temperature (increase creativity)
-   - else → nudge toward target of 7.0
-
-### Memory Architecture (RAG)
-
-Each agent has a **separate ChromaDB collection**:
-- `intro_memories` - IntroAgent's successful introductions
-- `body_memories` - BodyAgent's successful body sections
-- `conclusion_memories` - ConclusionAgent's successful conclusions
-
-**Why separate?** Prevents cross-contamination and allows per-agent specialization. An intro pattern shouldn't influence body generation.
-
-**Storage**: ChromaDB persists to `./data/memories/` with sentence-transformers embeddings (`all-MiniLM-L6-v2`).
-
-### Module Responsibilities
-
-- **`state.py`**: Defines `BlogState` TypedDict (LangGraph state) and `AgentMemory` Pydantic model
-- **`memory.py`**: `MemoryManager` class - wraps ChromaDB operations (store, retrieve, stats)
-- **`agents.py`**:
-  - `BaseAgent` abstract class with RAG retrieval + evolution logic
-  - `IntroAgent`, `BodyAgent`, `ConclusionAgent` - specialized implementations
-  - `create_agents()` factory - instantiates all agents with their MemoryManagers
-- **`evaluation.py`**: `ContentEvaluator` - multi-factor heuristic scoring (length, hooks, structure, etc.)
-- **`evolution.py`**: Utility functions for temperature adjustment calculations
-- **`visualization.py`**: `StreamVisualizer` - Rich terminal UI for live execution updates
-- **`pipeline.py`**: `HVASMiniPipeline` - orchestrates everything via LangGraph's `StateGraph`
+   - `EVOLUTION_LEARNING_RATE=0.1` - Parameter evolution aggressiveness
+   - `QUALITY_THRESHOLD=0.8` - Multi-pass early exit threshold
+   - `MAX_PASSES=3` - Maximum refinement iterations
 
 ## Key Design Patterns
 
 ### 1. LangGraph Node Pattern
-All agents implement `async def __call__(self, state: BlogState) -> BlogState`. This makes them compatible as LangGraph nodes. The pipeline builds the graph:
+
+All agents implement `async def __call__(self, state: BlogState) -> BlogState` to be compatible as LangGraph nodes:
 
 ```python
 workflow = StateGraph(BlogState)
 workflow.add_node("intro", self.agents["intro"])  # IntroAgent instance
 workflow.add_node("body", self.agents["body"])
-# ... etc
 workflow.add_edge("intro", "body")  # Sequential execution
 ```
 
 ### 2. Pending Memory Pattern
-Agents don't store memories immediately after generation. Instead:
+
+Agents don't store memories immediately:
 1. Agent generates content, stores in `self.pending_memory`
 2. Evaluator scores the content
 3. Evolution node calls `agent.store_memory(score)` which decides whether to persist
 
-**Why?** Evaluation must happen before storage decision (score-based threshold).
+**Why?** Evaluation must happen before storage decision.
 
-### 3. Streaming Visualization
-Pipeline uses `astream()` with `stream_mode="values"` to get state snapshots after each node execution. The visualizer consumes this stream and updates Rich UI panels in real-time.
+### 3. Hierarchical Execution
+
+`HierarchicalExecutor` manages:
+- **Downward pass**: `execute_downward(state, layer)` - distribute context from parent to children
+- **Upward pass**: `execute_upward(state, layer)` - aggregate child results back to parent
+- **Full cycle**: `execute_full_cycle(state)` - layers 1→2→3 down, then 3→2→1 up
+- **With refinement**: `execute_with_refinement(state)` - multi-pass with critique
+
+### 4. Semantic Context Filtering
+
+Coordinator's `distribute_context()` uses semantic distance:
+```python
+distance = compute_semantic_distance(hierarchy, "coordinator", child_role)
+filtered_context = filter_context_by_distance(intent, distance, min_ratio=0.3)
+```
+
+Closer semantic vectors = more context shared.
 
 ## Common Development Patterns
 
 ### Adding a New Agent Type
 
-1. **Inherit from BaseAgent**:
-```python
-class SummaryAgent(BaseAgent):
-    @property
-    def content_key(self) -> str:
-        return "summary"  # Key in BlogState
+1. Create class inheriting from `BaseAgent`
+2. Implement `content_key` property (key in BlogState)
+3. Implement `generate_content(state, memories, weighted_context)` method
+4. Add to hierarchy in `structure.py` (if hierarchical) or `create_agents()` (if flat)
+5. Update `BlogState` in `state.py` to include your field
+6. Add to evaluator's scoring methods
+7. Wire into pipeline workflow
 
-    async def generate_content(self, state: BlogState, memories: List[Dict]) -> str:
-        # Your generation logic with memory examples
-```
-
-2. **Update BlogState** in `state.py`:
-```python
-class BlogState(TypedDict):
-    # ... existing fields ...
-    summary: str  # Add your field
-```
-
-3. **Add to pipeline** in `pipeline.py`:
-```python
-workflow.add_node("summary", self.agents["summary"])
-workflow.add_edge("conclusion", "summary")  # Insert in workflow
-```
-
-4. **Add to evaluator** in `evaluation.py`:
-```python
-scores["summary"] = self._score_summary(state["summary"], state["topic"])
-```
-
-### Customizing Evaluation Criteria
+### Customizing Evaluation
 
 Edit `evaluation.py` scoring methods:
 ```python
 def _score_intro(self, intro: str, topic: str) -> float:
     score = 5.0  # Base score
-
-    # Add your custom criteria
-    if "your_criterion" in intro.lower():
+    # Add custom criteria
+    if my_criterion(intro):
         score += 1.5
-
     return min(10.0, score)
 ```
-
-See `docs/custom-evaluation.md` for detailed patterns (LLM-based evaluation, multi-objective scoring, etc.).
 
 ### Modifying Evolution Strategy
 
@@ -360,67 +184,79 @@ Edit `agents.py` `BaseAgent.evolve_parameters()`:
 ```python
 def evolve_parameters(self, score: float, state: BlogState):
     # Current: temperature only
-    # To add: max_tokens, top_p, etc.
+    # Add: max_tokens, top_p, etc.
+    self.parameters["max_tokens"] = adjust_based_on_output_length(state)
+```
 
-    # Example: evolve max_tokens based on body length
-    if self.role == "body":
-        target_length = 300
-        actual_length = len(state["body"].split())
-        if actual_length < target_length * 0.8:
-            self.parameters["max_tokens"] += 50
+### Extending Hierarchy
+
+Edit `src/hvas_mini/hierarchy/structure.py`:
+```python
+self.nodes = {
+    "coordinator": AgentNode(
+        role="coordinator",
+        layer=1,
+        children=["intro", "body", "conclusion", "your_new_agent"],
+        semantic_vector=[0.0, 1.0, 0.0]
+    ),
+    # Add your agent
+    "your_new_agent": AgentNode(
+        role="your_new_agent",
+        layer=2,
+        children=["some_specialist"],
+        semantic_vector=[0.5, 0.5, 0.5]  # Tune based on role
+    ),
+}
 ```
 
 ## Testing Strategy
 
-Tests are organized by component:
-- `test_state.py` - Pydantic validation, state creation
-- `test_memory.py` - ChromaDB operations, threshold filtering
-- `test_agents.py` - BaseAgent evolution, memory storage
-- `test_evaluation.py` - Scoring function correctness
-- `test_visualization.py` - Rich UI component creation
-- `test_pipeline.py` - Full pipeline execution
-- `test_integration.py` - End-to-end learning demonstration
-
-**Note**: Tests require actual dependencies (ChromaDB, transformers). Use temp directories for ChromaDB persistence in tests.
+Tests organized by component:
+- `test_state.py` - State validation, creation
+- `test_memory.py` - ChromaDB operations, thresholds
+- `test_memory_decay.py` - Time-based decay (M3)
+- `test_agent_weighting.py` - Trust-based weighting (M2)
+- `test_meta_agent.py` - Graph optimization (M4)
+- `test_async_orchestration.py` - Concurrent execution (M1)
+- `test_hierarchical_structure.py` - Hierarchy structure (M6)
+- `test_bidirectional_flow.py` - Context distribution, aggregation (M7)
+- `test_closed_loop_refinement.py` - Multi-pass refinement (M8)
+- `test_semantic_distance.py` - Semantic vector operations (M9)
 
 ## Observing Learning
 
-After running `main.py`, check:
+After running `main.py`:
+1. **Memory accumulation**: `ls -lh data/memories/` - ChromaDB data
+2. **Score trends**: Compare Generation 1 vs Generation 5 scores
+3. **Parameter convergence**: Watch temperature values in output
+4. **Retrieval patterns**: Generations 2 and 4 should show memory retrievals
 
-1. **Memory accumulation**: `ls -lh data/memories/` - ChromaDB persisted data
-2. **Score trends**: Compare Generation 1 vs Generation 5 scores in output
-3. **Parameter convergence**: Watch temperature values in visualization
-4. **Retrieval patterns**: Generations 2 and 4 (similar topics) should show memory retrievals
-
-Expected: ~0.5-1.0 point score improvement on similar topics after memories are stored.
+Expected: ~0.5-1.0 point score improvement on similar topics after memories stored.
 
 ## Important Notes
 
-- **Sequential Execution**: Despite "hierarchical" naming, current implementation runs agents sequentially (intro → body → conclusion). See `docs/langgraph-patterns.md` for parallel execution patterns.
-
-- **Score Threshold**: Default 7.0 means only high-quality outputs persist. Lower threshold = more memories but potentially lower quality examples.
-
-- **Temperature Bounds**: Evolution keeps temperature between `MIN_TEMPERATURE` (0.5) and `MAX_TEMPERATURE` (1.0) to prevent extreme values.
-
-- **Memory Retrieval Count**: Tracks how often each memory is reused. High retrieval count = valuable pattern.
-
-- **Worktrees Directory**: Contains git worktrees for feature branches (gitignored). Each has `docs/<branch-name>/AGENT_TASK.md` with implementation details.
-
-## Documentation
-
-- `README.md` - Theory, quick start, configuration
-- `spec.md` - Complete technical specification
-- `WORK_DIVISION.md` - Implementation plan (8 feature branches)
-- `docs/extending-agents.md` - Agent customization patterns
-- `docs/custom-evaluation.md` - Evaluation system customization
-- `docs/langgraph-patterns.md` - Advanced LangGraph workflows (parallel execution, conditional routing, etc.)
+- **Hierarchical Execution**: Current implementation uses 3-layer hierarchy with bidirectional flow
+- **Score Threshold**: Default 7.0 means only high-quality outputs persist
+- **Temperature Bounds**: Evolution keeps temperature between 0.5 and 1.0
+- **Multi-Pass**: Coordinator runs up to 3 refinement passes, exits early if quality ≥ 0.8
+- **Semantic Vectors**: Hand-crafted, not learned (research question: does this help?)
 
 ## Research Context
 
-This prototype tests 4 hypotheses:
-1. **Individual Memory**: Agents with RAG perform better than without
-2. **Parameter Evolution**: Self-adjusting parameters converge to optimal values
-3. **Transfer Learning**: Memories improve performance on similar (not identical) tasks
-4. **Hierarchical Coordination**: Sequential agents with context passing produce coherent outputs
+This prototype tests hypotheses:
+1. **Individual Memory**: Do agents with RAG perform better?
+2. **Parameter Evolution**: Do self-adjusting parameters converge optimally?
+3. **Transfer Learning**: Do memories improve performance on similar tasks?
+4. **Hierarchical Coordination**: Does multi-layer structure with bidirectional flow produce better outputs?
+5. **Semantic Filtering**: Does distance-based context filtering improve relevance?
 
-The demo (5 topics, 2 pairs of similar topics) is designed to demonstrate transfer learning (#3).
+The demo (5 topics, 2 pairs of similar) is designed to test transfer learning (#3).
+
+## Documentation
+
+- **`README.md`**: Research motivation, experiment design, thinking process
+- **`docs/`**: Implementation patterns and customization guides
+
+---
+
+**This is research code. Expect experiments, not production polish.**
