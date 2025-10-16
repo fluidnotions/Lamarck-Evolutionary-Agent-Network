@@ -67,7 +67,7 @@ class TrustManager:
 
         # Gradient descent toward signal
         delta = self.learning_rate * (performance_signal - current_weight)
-        new_weight = np.clip(current_weight + delta, 0.0, 1.0)
+        new_weight = float(np.clip(current_weight + delta, 0.0, 1.0))
 
         # Store
         if agent not in self.weights:
