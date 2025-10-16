@@ -1,6 +1,9 @@
 # Worktrees directory (feature branches)
 worktrees/
 
+# Agent task reference files (keep local only)
+docs/feature-plans/
+
 # Environment variables
 .env
 
