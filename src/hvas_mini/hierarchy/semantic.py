@@ -46,14 +46,14 @@ def compute_semantic_distance(
         return 0.5  # Default distance for zero vectors
 
     # Cosine similarity: dot product / (norm_a * norm_b)
-    similarity = np.dot(vec_a, vec_b) / (norm_a * norm_b)
+    similarity = float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
 
     # Clamp similarity to [-1, 1] (floating point safety)
     similarity = max(-1.0, min(1.0, similarity))
 
     # Convert to distance [0, 1]
     # similarity=1 → distance=0, similarity=-1 → distance=1
-    distance = (1.0 - similarity) / 2.0
+    distance = float((1.0 - similarity) / 2.0)
 
     return max(0.0, min(1.0, distance))
 
@@ -151,7 +151,7 @@ def compute_context_weights(
         distance = compute_semantic_distance(hierarchy, parent_role, child)
         # Convert distance to weight (inverse relationship)
         # distance=0 → weight=1.0, distance=1 → weight=0.0
-        weight = 1.0 - distance
+        weight = float(1.0 - distance)
         weights[child] = weight
 
     return weights
@@ -177,6 +177,6 @@ def get_contextual_relevance(
     distance = compute_semantic_distance(hierarchy, source_role, target_role)
 
     # Relevance is inverse of distance
-    relevance = 1.0 - distance
+    relevance = float(1.0 - distance)
 
     return max(0.0, min(1.0, relevance))

@@ -46,7 +46,7 @@ class DecayCalculator:
         delta_days = delta_seconds / 86400.0
 
         # Exponential decay
-        decay_factor = np.exp(-self.decay_lambda * delta_days)
+        decay_factor = float(np.exp(-self.decay_lambda * delta_days))
 
         return max(0.0, min(1.0, decay_factor))
 
@@ -73,7 +73,7 @@ class DecayCalculator:
         decay_factor = self.calculate_decay_factor(timestamp)
         score_weight = original_score / max_score
 
-        effective_score = similarity * decay_factor * score_weight
+        effective_score = float(similarity * decay_factor * score_weight)
 
         return effective_score
 

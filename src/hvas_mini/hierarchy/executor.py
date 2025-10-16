@@ -57,7 +57,7 @@ class HierarchicalExecutor:
             # Store with confidence
             state["layer_outputs"][layer][agent_role] = AgentOutput(
                 content=output,
-                confidence=self._estimate_confidence(output),
+                confidence=float(self._estimate_confidence(output)),
                 metadata={"parent": parent_role, "layer": layer}
             )
 
@@ -144,9 +144,9 @@ class HierarchicalExecutor:
 
         # Calculate weights based on confidence
         if total_confidence == 0:
-            weights = [1.0 / len(outputs)] * len(outputs)
+            weights = [float(1.0 / len(outputs))] * len(outputs)
         else:
-            weights = [o["confidence"] / total_confidence for o in outputs]
+            weights = [float(o["confidence"] / total_confidence) for o in outputs]
 
         # Combine content from all children
         combined_parts = []
@@ -155,11 +155,11 @@ class HierarchicalExecutor:
 
         return {
             "combined_content": "\n\n".join(combined_parts),
-            "weighted_confidence": sum(
+            "weighted_confidence": float(sum(
                 o["confidence"] * w for o, w in zip(outputs, weights)
-            ),
+            )),
             "source_count": len(outputs),
-            "individual_confidences": [o["confidence"] for o in outputs]
+            "individual_confidences": [float(o["confidence"]) for o in outputs]
         }
 
     async def execute_full_cycle(self, state: HierarchicalState) -> HierarchicalState:
@@ -265,7 +265,7 @@ class HierarchicalExecutor:
         if not confidences:
             return False  # No outputs to critique
 
-        avg_confidence = sum(confidences) / len(confidences)
+        avg_confidence = float(sum(confidences) / len(confidences))
 
         # Check quality threshold
         threshold = float(os.getenv("QUALITY_THRESHOLD", "0.8"))
