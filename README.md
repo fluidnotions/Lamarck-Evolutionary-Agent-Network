@@ -321,12 +321,14 @@ hvas-mini/
 │   ├── test_hierarchical_structure.py
 │   ├── test_bidirectional_flow.py
 │   ├── test_closed_loop_refinement.py
-│   └── test_semantic_distance.py
+│   ├── test_semantic_distance.py
+│   └── test_imports.py
 │
 └── docs/                            # Implementation notes
     ├── extending-agents.md
     ├── custom-evaluation.md
     ├── langgraph-patterns.md
+    ├── numpy-serialization-issue.md
     └── technical.md
 ```
 
