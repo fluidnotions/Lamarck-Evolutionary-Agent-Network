@@ -35,6 +35,12 @@ class AsyncCoordinator:
         """
         layer_start = time.time()
 
+        # Ensure state fields exist
+        if "agent_timings" not in state:
+            state["agent_timings"] = {}
+        if "layer_barriers" not in state:
+            state["layer_barriers"] = []
+
         # Record start times for each agent
         for agent in agents:
             agent_name = agent.role if hasattr(agent, 'role') else str(agent)
