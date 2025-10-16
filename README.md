@@ -268,23 +268,65 @@ If that sounds interesting, the codebase is designed to be hackable. Dive in, br
 
 ```
 hvas-mini/
-├── main.py                          # Entry point: runs the 5-generation experiment
+├── main.py                          # Entry point: 5-generation experiment
+├── pyproject.toml                   # uv configuration
+├── .env.example                     # Environment template
+├── README.md                        # This file
+├── CLAUDE.md                        # AI assistant guide
+│
 ├── src/hvas_mini/                   # Core implementation
-│   ├── state.py                     # State definitions
-│   ├── memory.py                    # RAG memory manager (ChromaDB wrapper)
-│   ├── agents.py                    # Base agent + specialized agents
-│   ├── evaluation.py                # Content scoring (the heuristics we're testing)
+│   ├── state.py                     # State definitions (BlogState, HierarchicalState)
+│   ├── memory.py                    # MemoryManager (ChromaDB wrapper)
+│   ├── agents.py                    # BaseAgent + Intro/Body/Conclusion agents
+│   ├── evaluation.py                # ContentEvaluator (heuristic scoring)
 │   ├── evolution.py                 # Parameter adjustment logic
-│   ├── visualization.py             # Terminal UI
-│   ├── pipeline.py                  # LangGraph orchestration
-│   └── hierarchy/                   # Hierarchical structure implementation
-│       ├── structure.py             # 3-layer hierarchy definition
-│       ├── coordinator.py           # Layer 1: Coordinator agent
-│       ├── specialists.py           # Layer 3: Specialist agents
-│       ├── executor.py              # Bidirectional flow execution
-│       └── semantic.py              # Semantic distance calculations
+│   ├── visualization.py             # StreamVisualizer (Rich terminal UI)
+│   ├── pipeline.py                  # HVASMiniPipeline (LangGraph orchestration)
+│   │
+│   ├── hierarchy/                   # M6-M9: Hierarchical structure
+│   │   ├── structure.py             # AgentHierarchy (3-layer definition)
+│   │   ├── coordinator.py           # CoordinatorAgent (Layer 1)
+│   │   ├── specialists.py           # Researcher/FactChecker/Stylist (Layer 3)
+│   │   ├── executor.py              # HierarchicalExecutor (bidirectional flow)
+│   │   ├── semantic.py              # Semantic distance calculations
+│   │   └── factory.py               # Agent instantiation
+│   │
+│   ├── memory/                      # M3: Memory decay
+│   │   ├── decay.py                 # DecayCalculator, MemoryPruner
+│   │   └── __init__.py
+│   │
+│   ├── weighting/                   # M2: Trust-based weighting
+│   │   ├── trust_manager.py         # TrustManager (confidence weighting)
+│   │   ├── weight_updates.py        # Weight adjustment logic
+│   │   └── __init__.py
+│   │
+│   ├── orchestration/               # M1: Async execution
+│   │   ├── async_coordinator.py     # Concurrent agent execution
+│   │   └── __init__.py
+│   │
+│   └── meta/                        # M4: Graph optimization
+│       ├── meta_agent.py            # MetaAgent (performance analysis)
+│       ├── metrics_monitor.py       # MetricsMonitor
+│       ├── graph_mutator.py         # GraphMutator
+│       └── __init__.py
+│
 ├── tests/                           # Test suite
+│   ├── test_state.py
+│   ├── test_memory.py
+│   ├── test_memory_decay.py
+│   ├── test_agent_weighting.py
+│   ├── test_meta_agent.py
+│   ├── test_async_orchestration.py
+│   ├── test_hierarchical_structure.py
+│   ├── test_bidirectional_flow.py
+│   ├── test_closed_loop_refinement.py
+│   └── test_semantic_distance.py
+│
 └── docs/                            # Implementation notes
+    ├── extending-agents.md
+    ├── custom-evaluation.md
+    ├── langgraph-patterns.md
+    └── technical.md
 ```
 
 ---
