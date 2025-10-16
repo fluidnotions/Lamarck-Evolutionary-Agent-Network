@@ -221,6 +221,7 @@ I'm deliberately keeping this simple to isolate what works and what doesn't:
 - Is 7.0 the right memory threshold, or should it be 8.0? 6.0?
 - Are 3 passes enough for refinement, or should it be adaptive?
 - Do the semantic vectors reflect actual semantic relationships?
+- **Are trust weights and graph mutation redundant?** The system has both M2 (trust-based weighting - agents trust each other based on performance) and M4 (meta-agent that can remove/restructure agents). If trust weights can drop to ~0, that functionally achieves the same thing as removing an agent. Do we need both mechanisms, or is one sufficient? This might be over-engineering the problem.
 
 These are research questions, not bugs. The prototype is designed to make these questions testable.
 
