@@ -1,162 +1,389 @@
-# HVAS Mini - A Research Exploration into Hierarchical Agent Learning
-
-> **"I have no idea if this will work, but that's the point of research."**
-
-This is an experiment in getting AI agents to actually *learn* from their past successes—not through fine-tuning, not through prompting tricks, but through something closer to how we learn: by remembering what worked before and applying it to similar problems later.
-
----
+# HVAS Mini - Evolutionary Agent Learning Research
 
 ## The Core Question
 
-**Can AI agents with their own memory and the ability to self-adjust become measurably better at tasks over time?**
+**Can AI agents improve by inheriting their parents' learned knowledge?**
 
-Not "better" in the sense of more tokens or more context. Better in the sense of: *"Last time I wrote an intro like this, it scored 9/10, so let me try that pattern again."*
+This is a research prototype testing **Lamarckian evolution** for AI agents:
 
----
+- **Prompts stay stable** (consistent behavior interface)
+- **Memories are inherited** (successful knowledge passes to offspring)
+- **Selection determines what propagates** (natural selection on knowledge, not random mutation)
 
-## The Thinking Process
+Think of it as: **Acquired wisdom becomes heritable DNA.**
 
-### The Problem I'm Exploring
-
-Traditional AI agent systems are stateless. Every run starts from scratch. They're like amnesiacs—brilliant, articulate amnesiacs who forget everything the moment the conversation ends.
-
-But what if they could remember? Not just cache responses, but actually:
-1. Store what worked well (based on measurable outcomes)
-2. Retrieve relevant past successes when facing similar tasks
-3. Adjust their behavior based on performance feedback
-
-### The Hypothesis (That Might Be Wrong)
-
-If each agent maintains its own memory of successful outputs (RAG-style) and can evolve its parameters based on performance scores, we should see:
-- **Transfer learning**: Performance improvements on similar (not identical) tasks
-- **Emergent optimization**: Self-adjusting parameters converging to optimal values
-- **Specialization**: Each agent developing its own "style" based on what works for it
-
-*Could be complete bullshit. That's what the experiment is for.*
-
-### Why Hierarchical?
-
-Because flat peer-to-peer pipelines don't reflect how actual work gets done. Real systems have structure:
-- A **coordinator** that understands the high-level goal
-- **Content specialists** that handle major pieces
-- **Domain experts** that provide specialized input
-
-The hierarchy allows for:
-- **Context distribution**: High-level intent flows down
-- **Result aggregation**: Detailed outputs bubble up
-- **Iterative refinement**: The coordinator can request revisions based on quality gates
-- **Semantic filtering**: Agents receive context weighted by relevance to their role
-
-Again, this might not work. But it's worth exploring.
+The goal is to test whether knowledge accumulation across generations produces agents that demonstrably improve over time—without the fragility of prompt engineering.
 
 ---
 
-## What Actually Happens
+## Why This Matters
 
-### The 3-Layer Architecture
+### The Problem: Agent Frameworks Are Fragile
 
+Current AI agent systems break with every model update. They rely on carefully crafted text prompts that need constant rewriting. We're building agentic systems in the wrong language.
+
+**Models don't think in text—they think in embeddings.** Geometric representations where meaning is encoded as position and relationships are measured by distance.
+
+What if agents coordinated through geometry rather than instructions?
+
+### The Hypothesis (Subject to Testing)
+
+**Prompts are the problem, not the solution.** That's why we need RAG in the first place—prompts can't encode nuanced knowledge.
+
+So instead of mutating prompts (perpetuating the problem), this system:
+- **Keeps prompts stable**: "You are an intro writer" never changes
+- **Evolves the knowledge base**: Successful memories get inherited
+- **Uses natural selection**: Better knowledge → better performance → more offspring
+- **Accumulates wisdom**: Each generation builds on the last
+
+This is **Lamarckian evolution**—acquired characteristics (learned knowledge) get passed on directly. For AI systems, this should be superior to Darwinian random mutation.
+
+**Result:** Systems that improve through use, not just through retraining.
+
+---
+
+## The Evolutionary Architecture
+
+### The Learning Architecture
+
+#### Stable Prompts (Interface Layer)
+
+Prompts are **constants**, not variables:
+
+```python
+role_prompts = {
+    'intro': "You write introductions.",
+    'body': "You write body paragraphs.",
+    'conclusion': "You write conclusions."
+}
 ```
-Layer 1: Coordinator
-         ├─ Parses intent
-         ├─ Distributes context to children
-         ├─ Critiques output quality
-         └─ Requests revisions if needed
-              ↓ context flows down
-Layer 2: Content Agents (Intro, Body, Conclusion)
-         ├─ Receive filtered context from coordinator
-         ├─ Generate their section
-         ├─ Query specialists for expertise
-         └─ Aggregate specialist input
-              ↓ context flows down
-Layer 3: Specialists (Researcher, Fact-Checker, Stylist)
-         ├─ Provide deep domain expertise
-         ├─ No children (leaf nodes)
-         └─ Results flow back up
-              ↑ results aggregate up
+
+**Why stable?** Consistent behavior, no prompt engineering bloat, no mutation degradation.
+
+#### Memory Inheritance (Knowledge Layer)
+
+Each agent has two types of memory:
+
+**1. Inherited Memories** (from parents)
+- Compacted/distilled knowledge from both parents
+- High-value insights that led to success
+- Passed down through reproduction
+
+**2. Personal Memories** (from experience)
+- Own lifetime experiences
+- All outputs + scores stored
+- Added to inheritance pool when reproducing
+
+**Memory structure:**
+```python
+class Agent:
+    inherited_memories: List[Memory]  # From parents
+    personal_memories: List[Memory]   # From own experience
+
+    def all_memories(self):
+        return self.inherited_memories + self.personal_memories
 ```
+
+#### Evolutionary Operators
+
+**Selection** (choose parents):
+- ε-greedy, tournament, or fitness-weighted
+- High-performing agents reproduce more
+
+**Memory Compaction** (create offspring):
+```python
+def reproduce(parent1, parent2):
+    # Merge both parents' full memory banks
+    combined = parent1.all_memories() + parent2.all_memories()
+
+    # Compact to manageable size using strategy
+    inherited = compact_memories(combined, max_size=100)
+
+    # Child gets compacted wisdom, same prompt as parents
+    child = Agent(
+        prompt=role_prompts[parent1.role],  # Stable
+        inherited_memories=inherited         # Evolved
+    )
+    return child
+```
+
+**Population Dynamics:**
+- 5 agents per role (15 total)
+- Evolution every 10 generations
+- Add agents when diversity drops
+- Remove agents when fitness < 6.0 (after 20+ tasks)
 
 ### The Learning Cycle
 
-For each agent, each generation:
-1. **Retrieve**: Query its own memory bank for past successful outputs (semantic similarity)
-2. **Generate**: Create content informed by those examples + weighted context from parent
-3. **Evaluate**: Get scored (0-10) on multiple quality factors
-4. **Store**: If score ≥ 7.0, save this output as a new example for future use
-5. **Evolve**: Adjust parameters (temperature, etc.) based on rolling performance average
+Each agent, each generation:
 
-### Multi-Pass Refinement
+1. **Start with inheritance**: Already has compacted wisdom from parents
+2. **Retrieve**: Query all memories (inherited + personal) for semantically similar successes
+3. **Receive Context**: Get weighted context from other agents (40% hierarchy, 30% high-performers, 20% random low-performer, 10% peer)
+4. **Generate**: Create content using stable prompt + retrieved memories + external context
+5. **Evaluate**: Get scored by LLM on quality factors (engagement, clarity, depth)
+6. **Store**: Add output + score to personal memory bank
+7. **Evolve** (every 10 generations):
+   - **Selection**: Best agents chosen as parents
+   - **Compaction**: Merge + distill parents' memories
+   - **Reproduction**: Child inherits compacted knowledge
+   - **Population management**: Add/remove agents based on performance
 
-The coordinator can run multiple passes (up to 3 by default):
-- First pass: Generate initial content
-- Coordinator critiques: "Body is too short", "Intro lacks hook"
-- Second pass: Content agents revise based on feedback
-- If quality threshold met (avg confidence ≥ 0.8): Stop early
-- Otherwise: Continue up to max passes
+**Key insight:** Prompts stay stable. Memories evolve through inheritance. Natural selection determines which knowledge propagates.
 
-### Semantic Distance Weighting
+---
 
-Not all context is equally relevant. The system uses hand-crafted semantic vectors to:
-- Calculate "distance" between agents (e.g., researcher is close to fact-checker, far from stylist)
-- Filter context based on distance (closer = more context shared)
-- Weight aggregation by semantic relevance
+## Memory Compaction Strategies
 
-*Is this the right approach? Don't know yet. Testing it.*
+Instead of committing to one compaction approach, we're **testing multiple strategies in parallel** to empirically determine which inheritance mechanism works best.
+
+### Three Baseline Strategies
+
+#### Strategy A: Score-Weighted Selection
+```python
+def compact_memories(combined, max_size=100):
+    # Keep memories that led to highest scores
+    return sorted(combined, key=lambda m: m.score)[-max_size:]
+```
+- **Selection**: ε-greedy with high exploitation (90/10)
+- **Compaction**: Pure score ranking
+- **Evolution**: Slow (every 20 generations)
+- **Hypothesis**: Quality over quantity—only pass on proven winners
+
+#### Strategy B: Diversity Preservation
+```python
+def compact_memories(combined, max_size=100):
+    # Keep diverse memories covering different topics
+    clusters = cluster_by_embedding(combined)
+    return [cluster.best_example for cluster in clusters][:max_size]
+```
+- **Selection**: Tournament (top 3 compete)
+- **Compaction**: Cluster-based diversity
+- **Evolution**: Fast (every 5 generations)
+- **Hypothesis**: Coverage beats optimization—need examples across domains
+
+#### Strategy C: Usage-Based Retention
+```python
+def compact_memories(combined, max_size=100):
+    # Keep memories that were frequently retrieved and useful
+    return sorted(combined,
+                 key=lambda m: m.retrieval_count * m.score
+                )[-max_size:]
+```
+- **Selection**: Fitness-proportional probability
+- **Compaction**: Retrieval count × score
+- **Evolution**: Adaptive (speeds up when stagnant)
+- **Hypothesis**: Field-tested knowledge beats theoretical quality
+
+### What We're Measuring
+
+Each strategy tracks:
+- **Fitness trajectory**: Average and best scores over 100 generations
+- **Diversity metrics**: Population variance, unique strategies
+- **Efficiency**: Fitness gain per API call
+- **Specialization**: Domain-specific performance variance
+- **Innovation rate**: Novel high-scoring outputs
+
+**The experiment:** Run 100 generations for each strategy on identical task sets, then compare. Which configuration produces the best learning?
+
+---
+
+## The Geometric Insight
+
+Traditional object-oriented systems use discrete, symbolic relationships:
+
+```python
+class Child extends Parent  # Hierarchical syntax
+```
+
+Vector-based systems use continuous, contextual relationships:
+
+```python
+vector(Child) = vector(Parent) + Δ(role)  # Semantic topology
+```
+
+**This is the natural generalization of inheritance for probabilistic systems.**
+
+In HVAS:
+- **Distance encodes influence**: Closer agents (in embedding space) share more context
+- **Context becomes geometry**: Agents receive weighted information based on semantic proximity
+- **Coordination emerges from topology**: No hardcoded rules—just navigate the meaning-space
+
+The 40/30/20/10 context distribution isn't arbitrary—it's creating a gradient field where:
+- 40% from hierarchy (structured intent)
+- 30% from high-performers (proven patterns)
+- 20% from random low-performers (forced diversity)
+- 10% from role peers (specialist knowledge)
+
+Information flows through the geometry. Success reshapes the landscape.
+
+---
+
+## Why This Design
+
+### Context is Additive, Not Selective
+
+**Critical decision:** High-performing agents get to *broadcast* their knowledge more widely, but they do NOT get privileged access to more information.
+
+This prevents "rich get richer" dynamics that cause:
+- Premature convergence (all agents become similar)
+- Loss of diversity (alternative strategies die)
+- Reduced innovation (no cross-pollination)
+
+By keeping information access equal while varying influence, we maintain evolutionary diversity.
+
+### Why Lamarckian > Darwinian for AI
+
+**Darwinian evolution** (biological): Random mutations hope to stumble on improvements
+**Lamarckian evolution** (AI systems): Successful learning gets passed on directly
+
+For AI agents, Lamarckian is superior because:
+- **Direct knowledge transfer**: No need to re-learn what parents already know
+- **Faster convergence**: Start each generation with accumulated wisdom
+- **Preserves hard-won insights**: Successful patterns don't get lost
+- **Natural selection still applies**: Bad knowledge leads to poor performance → no reproduction
+
+**Example:**
+```python
+# Generation 1 agent learns through experience:
+personal_memory = "Questions increased engagement by 31% on technical topics"
+
+# Generation 2 inherits this as prior knowledge:
+inherited_memory = "Questions increased engagement by 31% on technical topics"
+
+# Generation 2 builds on it:
+personal_memory = "Questions + statistics in second sentence = 43% engagement"
+
+# Generation 3 inherits both insights:
+inherited_memories = [
+    "Questions increased engagement by 31%",
+    "Questions + statistics in second sentence = 43%"
+]
+```
+
+Knowledge accumulates. Each generation starts ahead.
+
+### Multiple Compaction Strategies = Empirical Answers
+
+We don't *know* which memory compaction approach works best. So we test them in parallel:
+- **Score-weighted**: Pass on only the best (elite inheritance)
+- **Diversity-based**: Pass on diverse examples (coverage inheritance)
+- **Usage-based**: Pass on field-tested knowledge (practical inheritance)
+
+This isn't just A/B testing—it's **meta-optimization of knowledge inheritance**. The compaction strategies themselves could eventually evolve.
+
+---
+
+## What Success Looks Like
+
+### Measurable Outcomes (100 Generations)
+
+- **Fitness improvement**: Average scores increase by >0.5 points
+- **Emergent specialization**: Agents develop domain-specific expertise (variance >1.0)
+- **Sustained diversity**: Population doesn't collapse to single strategy (std dev >0.5)
+- **Memory effectiveness**: Retrieval count correlates with performance
+- **Strategy winner**: One configuration demonstrably outperforms others
+
+### Observable Phenomena
+
+- **Knowledge lineages**: Successful insights propagate across generations
+- **Memory accumulation**: Inherited (50-100) + personal (50-150) = 100-250 total experiences per agent
+- **Compaction quality**: Later generations have higher-quality inherited memories
+- **Cross-pollination**: 20% diversity injection prevents echo chambers
+- **Specialization divergence**: Intro agents accumulate different knowledge than Body agents
+
+### What Failure Looks Like
+
+- **All strategies converge**: Compaction approach doesn't matter (inheritance mechanism is irrelevant)
+- **No generational improvement**: Later generations perform same as Generation 1 (memory inheritance doesn't help)
+- **Memory bloat**: Inherited memories add noise instead of signal
+- **Population diversity collapses**: Selection pressure too strong (premature convergence)
+- **No domain specialization**: Agents don't develop distinct knowledge bases
+
+If any of these happen, we learn what *doesn't* work. That's still valuable.
 
 ---
 
 ## The Experiment
 
-The demo runs 5 blog post generations:
-1. **"introduction to machine learning"** - Baseline (no memories yet)
-2. **"machine learning applications"** - Similar topic (should reuse memories from #1)
-3. **"python programming basics"** - New topic (different domain)
-4. **"python for data science"** - Similar to #3 (should reuse those memories)
-5. **"artificial intelligence ethics"** - New topic
+### Task: Blog Post Generation
 
-**What I'm looking for**:
-- Do topics 2 and 4 score higher than topics 1 and 3? (Transfer learning)
-- Do agent parameters (temperature) converge to stable values? (Emergent optimization)
-- Do memory retrieval counts correlate with better outputs? (Memory effectiveness)
+Three agent roles working sequentially:
+- **IntroAgent**: Writes introductions
+- **BodyAgent**: Writes body sections
+- **ConclusionAgent**: Writes conclusions
 
-**Expected Results**:
-- ~0.5-1.0 point score improvement on similar topics (if the hypothesis holds)
-- Temperature values stabilizing after 3-4 generations
-- Memory banks accumulating 2-4 high-quality examples per agent
+Each role has 5 competing agents (15 total population).
 
-**If it doesn't work**:
-- Maybe the scoring heuristics are bad
-- Maybe semantic vectors are nonsense
-- Maybe the whole concept is flawed
+### Test Dataset
 
-That's fine. That's research.
 
----
 
-## Why This Matters (If It Works)
+### Execution
 
-If agents can demonstrably learn from experience:
-- **Cheaper**: Less need for massive context windows stuffed with examples
-- **Faster**: Retrieval from vector DB is faster than processing 50k token prompts
-- **Specialized**: Each agent develops domain-specific expertise
-- **Adaptive**: System improves with use, not just with retraining
+Run all 3 strategies in parallel for 100 generations:
+- Strategy A population (isolated)
+- Strategy B population (isolated)
+- Strategy C population (isolated)
 
-But these are hypotheticals. The prototype is designed to test if the core mechanisms even function.
+Same task sequence, same initial populations, no cross-contamination.
+
+### Analysis
+
+Statistical comparison:
+- t-tests between strategies
+- ANOVA for multi-strategy comparison
+- Regression analysis (fitness vs generation)
+- Diversity metrics over time
+- Specialization emergence patterns
+
+**Goal:** Identify which evolutionary configuration produces the best learning dynamics.
 
 ---
 
-## Technology Stack
+## Technical Implementation
 
-*For those who care about the implementation:*
+### Technology Stack
 
-- **LangGraph**: Workflow orchestration (bidirectional flows, state management)
-- **Anthropic Claude**: LLM for content generation
-- **ChromaDB**: Vector database for RAG memory (separate collection per agent)
-- **sentence-transformers**: Text embeddings for semantic similarity
-- **Rich**: Terminal UI for watching the learning happen in real-time
+- **LangGraph**: Workflow orchestration
+- **Anthropic Claude**: LLM for generation and evaluation
+- **ChromaDB**: Vector database (separate collection per agent)
+- **sentence-transformers**: Embeddings for semantic similarity
+- **Streamlit**: Dashboard for monitoring (Milestone 5)
+
+### Architecture
+
+```
+┌─────────────────────────────────────────┐
+│     Evolutionary Strategy Manager       │
+│  (Strategy A / B / C configurations)    │
+└─────────────┬───────────────────────────┘
+              │
+    ┌─────────┼─────────┬─────────┐
+    │         │         │         │
+┌───▼────┐ ┌─▼─────┐ ┌─▼─────┐ ┌─▼──────┐
+│Intro×5 │ │Body×5 │ │Concl×5│ │Evaluator│
+│Pool    │ │Pool   │ │Pool   │ │ (LLM)  │
+└───┬────┘ └─┬─────┘ └─┬─────┘ └────────┘
+    │        │         │
+    ▼        ▼         ▼
+[ChromaDB] [ChromaDB] [ChromaDB]
+15 isolated collections
+```
+
+### Implementation Roadmap
+
+**Milestone 1 (Core System)**: Agent pools, fitness tracking, context distribution, memory inheritance structure
+**Milestone 2 (Evolution)**: Memory compaction, reproduction, population dynamics
+**Milestone 3 (Strategies)**: Compaction strategy abstraction, 3 baseline implementations
+**Milestone 4 (Experimentation)**: 100-gen runs, statistical analysis, lineage tracking
+**Milestone 5 (Enhancement)**: Dashboard, search integration, meta-evolution of compaction strategies
+
+**Total timeline:** 4 weeks
 
 ---
 
-## Running It Yourself
+## Running the Experiment
 
 ```bash
 # Prerequisites
@@ -169,236 +396,154 @@ uv sync
 
 # Setup environment
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env and add ANTHROPIC_API_KEY
 
-# Run the experiment
+# Run current prototype (proof of concept)
 uv run python main.py
 ```
 
-You'll see:
-- Live visualization of agent execution
-- Memory retrieval logs (when agents pull past examples)
-- Quality scores for each generation
-- Parameter evolution (temperature changes)
-- Final statistics showing whether learning occurred
-
-Expected runtime: ~5-10 minutes (5 generations × 3 agents + multi-pass refinement)
+**Current version** runs basic learning demonstration (5 topics, single agent per role).
+**Next version** (Milestone 1-4) will run full evolutionary experiments.
 
 ---
 
-## What to Look For
+## Key Configuration
 
-### Metrics to Watch
+```bash
+# Memory
+MEMORY_SCORE_THRESHOLD=7.0      # (Deprecated in M1: store ALL experiences)
+INHERITED_MEMORY_SIZE=100       # Max memories inherited from parents
 
-1. **Score Progression**: Do later similar topics score higher?
-2. **Memory Accumulation**: Does each agent build up a library of successful patterns?
-3. **Parameter Convergence**: Do temperatures stop bouncing around?
-4. **Retrieval Patterns**: Are memories actually being reused?
-5. **Confidence Trends**: Does the system become more confident over time?
+# Evolution
+EVOLUTION_FREQUENCY=10          # Generations between evolution cycles
+MIN_POPULATION=3                # Per role
+MAX_POPULATION=8                # Per role
 
-### The Real Test
-
-After generation 5, compare:
-- **Topic 1 score vs Topic 2 score** (ML baseline vs ML with memory)
-- **Topic 3 score vs Topic 4 score** (Python baseline vs Python with memory)
-
-If Topic 2 and Topic 4 consistently score higher, the hypothesis has legs. If not, back to the drawing board.
-
----
-
-## Limitations & Unknowns
-
-I'm deliberately keeping this simple to isolate what works and what doesn't:
-
-**Known Limitations**:
-- Heuristic scoring (not LLM-based evaluation)
-- Hand-crafted semantic vectors (not learned)
-- Small memory banks (no forgetting mechanism yet)
-- Fixed 3-layer hierarchy (not dynamic)
-
-**Unknown Unknowns**:
-- Does semantic distance actually help, or is it just noise?
-- Is 7.0 the right memory threshold, or should it be 8.0? 6.0?
-- Are 3 passes enough for refinement, or should it be adaptive?
-- Do the semantic vectors reflect actual semantic relationships?
-- **Are trust weights and graph mutation redundant?** The system has both M2 (trust-based weighting - agents trust each other based on performance) and M4 (meta-agent that can remove/restructure agents). If trust weights can drop to ~0, that functionally achieves the same thing as removing an agent. Do we need both mechanisms, or is one sufficient? This might be over-engineering the problem.
-
-These are research questions, not bugs. The prototype is designed to make these questions testable.
+# Strategy-specific (set by strategy)
+SELECTION_METHOD=epsilon_greedy|tournament|fitness_weighted
+COMPACTION_METHOD=score_weighted|diversity_based|usage_based
+CONTEXT_WEIGHTS=40,30,20,10     # Hierarchy/High/Low/Peer
+```
 
 ---
 
-## What's Next
+## What This Research Explores
 
-If the core mechanisms show promise:
-1. **LLM-based evaluation**: Replace heuristics with actual quality assessment
-2. **Learned semantic vectors**: Replace hand-crafted vectors with learned embeddings
-3. **Memory consolidation**: Add forgetting, clustering, importance weighting
-4. **Dynamic hierarchy**: Let agents spawn specialists on demand
-5. **Cross-agent memory**: Selective sharing of successful patterns
-6. **Real-world tasks**: Move beyond blog generation to code, research, analysis
+### For AI Engineering
 
-But first, does the basic loop even work? That's what this prototype tests.
+- **Stable multi-agent systems**: Coordinate through embeddings, not fragile prompts
+- **Self-improving agents**: Systems that get better with use
+- **Evolutionary robustness**: Population diversity prevents catastrophic failure
+- **Compositional learning**: Agents as basis vectors in semantic space
+
+### For Evolutionary Computation
+
+- **Lamarckian AI**: Does inheritance of acquired characteristics work for agents?
+- **Memory compaction**: How to distill knowledge across generations?
+- **Knowledge selection**: Which compaction strategy produces best outcomes?
+- **Meta-evolution**: Can compaction strategies themselves evolve?
+
+### For Cognitive Architecture
+
+- **Generational learning**: Each generation builds on parents' knowledge
+- **Semantic coordination**: Agents navigate meaning-space, not call graphs
+- **Emergent specialization**: Roles arise from accumulated knowledge, not programming
+- **Cultural transmission**: Knowledge passes through generations (like human learning)
 
 ---
 
-## For Potential Team Members
+## Current Status
+
+**Phase:** Proof of concept complete
+**Next:** Milestone 1 implementation (agent pools, context distribution)
+
+**Proof of concept demonstrates:**
+- ✅ Individual agent memory (ChromaDB)
+- ✅ Parameter evolution (temperature adjustment)
+- ✅ Transfer learning (semantic memory retrieval)
+- ✅ Real-time visualization
+
+**Milestone 1-4 will implement:**
+- Agent populations (5 per role)
+- Memory inheritance (inherited + personal memories)
+- Memory compaction strategies (score-weighted, diversity-based, usage-based)
+- Reproduction with knowledge transfer
+- 100-generation experiments
+- Lineage tracking and statistical comparison
+
+---
+
+## For Potential Collaborators
 
 If you're reading this because you're considering joining:
 
-**What I value**:
-- Intellectual honesty (saying "I don't know" is encouraged)
-- First-principles thinking (challenging assumptions, not just optimizing)
-- Experimental rigor (testing hypotheses, not just building features)
-- Willingness to fail (most research leads nowhere, and that's fine)
+**What this project is:**
+- An empirical test of hybrid evolutionary learning
+- A platform for comparing genetic algorithm strategies
+- Research into geometric agent coordination
+- A learning environment (I'm learning, you'd be learning)
 
-**What this project is**:
-- An experiment in agent learning mechanics
-- A testbed for measuring whether certain intuitions hold up
-- A learning environment (I'm learning, you'd be learning, we'd all be learning)
-
-**What this project isn't**:
+**What this project isn't:**
 - A production system (it's deliberately simplified)
-- A sure thing (it might all be wrong)
-- A well-defined roadmap (research doesn't work that way)
+- A guaranteed success (it might not work)
+- A defined roadmap (research adapts)
 
-If that sounds interesting, the codebase is designed to be hackable. Dive in, break things, test ideas.
+**What I value:**
+- Intellectual honesty ("I don't know" > speculation)
+- First-principles thinking (challenge assumptions)
+- Experimental rigor (measure, don't guess)
+- Willingness to fail (most experiments fail—that's research)
 
----
+**The interesting questions:**
+- Does Lamarckian inheritance work for AI agents?
+- Which memory compaction strategy produces best outcomes?
+- How much inherited knowledge is optimal? (Too little = wasted potential, too much = noise)
+- Does knowledge accumulation across generations beat single-agent learning?
+- Can compaction strategies themselves evolve?
+- Does geometric coordination actually help?
 
-## Project Structure
-
-```
-hvas-mini/
-├── main.py                          # Entry point: 5-generation experiment
-├── pyproject.toml                   # uv configuration
-├── .env.example                     # Environment template
-├── README.md                        # This file
-├── CLAUDE.md                        # AI assistant guide
-│
-├── src/hvas_mini/                   # Core implementation
-│   ├── state.py                     # State definitions (BlogState, HierarchicalState)
-│   ├── memory.py                    # MemoryManager (ChromaDB wrapper)
-│   ├── agents.py                    # BaseAgent + Intro/Body/Conclusion agents
-│   ├── evaluation.py                # ContentEvaluator (heuristic scoring)
-│   ├── evolution.py                 # Parameter adjustment logic
-│   ├── visualization.py             # StreamVisualizer (Rich terminal UI)
-│   ├── pipeline.py                  # HVASMiniPipeline (LangGraph orchestration)
-│   │
-│   ├── hierarchy/                   # M6-M9: Hierarchical structure
-│   │   ├── structure.py             # AgentHierarchy (3-layer definition)
-│   │   ├── coordinator.py           # CoordinatorAgent (Layer 1)
-│   │   ├── specialists.py           # Researcher/FactChecker/Stylist (Layer 3)
-│   │   ├── executor.py              # HierarchicalExecutor (bidirectional flow)
-│   │   ├── semantic.py              # Semantic distance calculations
-│   │   └── factory.py               # Agent instantiation
-│   │
-│   ├── memory/                      # M3: Memory decay
-│   │   ├── decay.py                 # DecayCalculator, MemoryPruner
-│   │   └── __init__.py
-│   │
-│   ├── weighting/                   # M2: Trust-based weighting
-│   │   ├── trust_manager.py         # TrustManager (confidence weighting)
-│   │   ├── weight_updates.py        # Weight adjustment logic
-│   │   └── __init__.py
-│   │
-│   ├── orchestration/               # M1: Async execution
-│   │   ├── async_coordinator.py     # Concurrent agent execution
-│   │   └── __init__.py
-│   │
-│   └── meta/                        # M4: Graph optimization
-│       ├── meta_agent.py            # MetaAgent (performance analysis)
-│       ├── metrics_monitor.py       # MetricsMonitor
-│       ├── graph_mutator.py         # GraphMutator
-│       └── __init__.py
-│
-├── tests/                           # Test suite
-│   ├── test_state.py
-│   ├── test_memory.py
-│   ├── test_memory_decay.py
-│   ├── test_agent_weighting.py
-│   ├── test_meta_agent.py
-│   ├── test_async_orchestration.py
-│   ├── test_hierarchical_structure.py
-│   ├── test_bidirectional_flow.py
-│   ├── test_closed_loop_refinement.py
-│   ├── test_semantic_distance.py
-│   └── test_imports.py
-│
-└── docs/                            # Implementation notes
-    ├── extending-agents.md
-    ├── custom-evaluation.md
-    ├── langgraph-patterns.md
-    ├── numpy-serialization-issue.md
-    └── technical.md
-```
-
----
-
-## Configuration
-
-Key knobs you can turn (`.env` file):
-
-```bash
-# Memory threshold: How good does output need to be to remember it?
-MEMORY_SCORE_THRESHOLD=7.0    # 0-10 scale
-
-# Evolution: How aggressively do agents adjust their parameters?
-EVOLUTION_LEARNING_RATE=0.1   # 0.0-1.0
-
-# Quality threshold: When does multi-pass refinement stop early?
-QUALITY_THRESHOLD=0.8         # 0.0-1.0
-
-# Max passes: How many refinement iterations before giving up?
-MAX_PASSES=3                  # Default
-
-# Base temperature: Starting point for all agents
-BASE_TEMPERATURE=0.7          # 0.0-1.0
-```
-
-Tweak these and see what breaks (or improves).
-
----
-
-## Testing
-
-```bash
-# Run all tests
-uv run pytest
-
-# Run specific test file
-uv run pytest tests/test_hierarchical_structure.py -v
-
-# Run with coverage
-uv run pytest --cov=src/hvas_mini
-```
-
-Tests cover:
-- Hierarchy structure (parent-child relationships, layer organization)
-- Bidirectional flow (context distribution, result aggregation)
-- Closed-loop refinement (multi-pass execution, quality gates)
-- Semantic distance (vector calculations, context filtering)
-- Memory operations (storage, retrieval, thresholds)
-- Parameter evolution (temperature adjustments, convergence)
+If testing those questions interests you, dive in.
 
 ---
 
 ## Documentation
 
-- **`CLAUDE.md`**: Guide for AI assistants working on this codebase
-- **`docs/`**: Implementation patterns and customization guides
+- **`README.md`**: This file (research overview)
+- **`docs/technical.md`**: Implementation details, setup, architecture
+- **`docs/NEXT_ITERATION.md`**: Design decisions and evolutionary strategy framework
+- **`docs/IMPLEMENTATION_ORCHESTRATION.md`**: Milestone breakdown, branch structure
+- **`CLAUDE.md`**: AI assistant guide
 
 ---
 
 ## Final Thoughts
 
-This is research, not engineering. The goal isn't to build a polished product—it's to test whether a set of ideas about agent learning hold up under scrutiny.
+This is research, not engineering. The goal is to test whether **Lamarckian memory inheritance**—where agents pass learned knowledge to offspring—produces demonstrable improvement over time.
 
-Maybe it works. Maybe it doesn't. Either way, we'll learn something.
+The hypothesis: prompts are the problem (that's why we need RAG). So keep prompts stable and evolve the knowledge base instead.
 
-**Questions? Suggestions? Think I'm completely wrong?**
+Maybe it works. Maybe it doesn't. Either way, we'll have empirical answers instead of speculation.
+
+**Questions? Think the hypothesis is wrong? Want to suggest experiments?**
 
 Open an issue. Let's discuss.
 
 ---
 
-**Happy Exploring. 🧠🔬**
+**HVAS Mini** — Evolution meets memory. Let's see what emerges.
+
+---
+
+## Technical Details
+
+For installation, configuration, architecture documentation, and customization guides:
+
+→ **See [docs/technical.md](docs/technical.md)**
+
+**Quick Start:**
+```bash
+uv sync              # Install dependencies
+uv run python main.py  # Run proof of concept (5 generations)
+```
+
+**Requirements:** Python 3.11+, Anthropic API key, uv package manager
