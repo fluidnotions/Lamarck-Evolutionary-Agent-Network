@@ -379,8 +379,6 @@ Statistical comparison:
 **Milestone 4 (Experimentation)**: 100-gen runs, statistical analysis, lineage tracking
 **Milestone 5 (Enhancement)**: Dashboard, search integration, meta-evolution of compaction strategies
 
-**Total timeline:** 4 weeks
-
 ---
 
 ## Running the Experiment
@@ -404,6 +402,27 @@ uv run python main.py
 
 **Current version** runs basic learning demonstration (5 topics, single agent per role).
 **Next version** (Milestone 1-4) will run full evolutionary experiments.
+
+### Running Tests
+
+All implementations require comprehensive unit tests in the `tests/` directory:
+
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Run specific test module
+uv run pytest tests/test_memory.py -v
+
+# Run with coverage
+uv run pytest tests/ --cov=src/hvas_mini --cov-report=html
+```
+
+**Test Coverage Requirements**:
+- All new classes and functions must have unit tests
+- Target: >90% code coverage per module
+- Test files follow naming: `test_<module_name>.py`
+- Each AGENT_TASK.md includes specific test cases to implement
 
 ---
 
@@ -452,6 +471,120 @@ CONTEXT_WEIGHTS=40,30,20,10     # Hierarchy/High/Low/Peer
 
 ---
 
+## Future Enhancements
+
+### Phase 2: Neural Circuit Evolution (Planned)
+
+The current system evolves **knowledge** (memories) while keeping model architecture fixed. A future enhancement will evolve the **neural pathways themselves** using open-source models with LoRA adapters.
+
+#### Concept: Evolvable Model Weights
+
+Instead of using Claude API (black box), use open models (Mistral, Llama, etc.) where you can:
+- **Discover circuits**: Find which neural pathways activate for different content types
+- **Inject LoRA adapters**: Add trainable parameters to specific layers
+- **Evolve weights**: Apply genetic algorithms to LoRA adapter weights
+- **Sexual reproduction**: Crossover + mutation of model parameters between agents
+
+#### Architecture
+
+```python
+class NeuralEvolvableAgent:
+    """Agent with evolvable neural architecture"""
+
+    def __init__(self, base_model='mistralai/Mistral-7B-Instruct'):
+        self.base_model = load_model(base_model)  # Frozen base
+
+        # Each agent gets unique LoRA adapter
+        self.lora_adapter = LoraConfig(
+            r=8,  # Low rank
+            target_modules=["q_proj", "v_proj"],  # Attention layers
+            lora_dropout=0.1
+        )
+
+        # Circuit discovery results
+        self.specialized_circuits = None
+
+    def discover_specialization(self):
+        """Find which neurons activate for agent's role"""
+        from transformer_lens import HookedTransformer
+
+        # Hook into model layers
+        _, cache = self.model.run_with_cache(test_prompts)
+
+        # Find "hot" neurons for this agent's tasks
+        self.specialized_circuits = identify_active_pathways(cache)
+
+    def reproduce_with_partner(self, partner):
+        """Sexual reproduction of LoRA weights"""
+
+        child = NeuralEvolvableAgent(self.base_model)
+
+        # Crossover: Mix LoRA weights from both parents
+        for key in self.lora_adapter.state_dict():
+            parent1_weight = self.lora_adapter.state_dict()[key]
+            parent2_weight = partner.lora_adapter.state_dict()[key]
+
+            # Random crossover mask
+            mask = torch.rand_like(parent1_weight) > 0.5
+            child_weight = torch.where(mask, parent1_weight, parent2_weight)
+
+            # Mutation: Small random perturbations
+            if random.random() < 0.1:
+                child_weight += torch.randn_like(child_weight) * 0.01
+
+            child.lora_adapter.load_state({key: child_weight})
+
+        # Inherit discovered circuits
+        child.specialized_circuits = merge_circuits(
+            self.specialized_circuits,
+            partner.specialized_circuits
+        )
+
+        return child
+```
+
+#### Implementation Options
+
+**Lightweight (Fast)**:
+- **Model**: `microsoft/phi-2` (2.7B params)
+- **Circuit Discovery**: Heuristic pathway evolution (test injection points)
+- **Runs on**: Consumer GPU (8GB VRAM)
+
+**Advanced (Thorough)**:
+- **Model**: `mistralai/Mistral-7B-Instruct-v0.2`
+- **Circuit Discovery**: Full transformer analysis with `transformer-lens`
+- **Runs on**: High-end GPU (24GB VRAM)
+
+#### Why This is Powerful
+
+Current system: Evolve **what the model knows** (memories)
+Future system: Evolve **how the model thinks** (neural weights)
+
+**Benefits**:
+- **True neural evolution**: Not just knowledge inheritance, but architectural adaptation
+- **Specialization at weight level**: Agents develop unique neural pathways
+- **No API costs**: Local models, full control
+- **Research potential**: Explore which neural circuits matter for different tasks
+
+#### Toggle Feature
+
+```python
+# Configuration
+USE_NEURAL_EVOLUTION = False  # Default: memory-only evolution
+
+if USE_NEURAL_EVOLUTION:
+    # Use open models with circuit discovery
+    agent = NeuralEvolvableAgent('mistralai/Mistral-7B')
+    agent.discover_specialization()  # Slow initial setup
+else:
+    # Use Claude API with memory evolution (current)
+    agent = ClaudeAgent()
+```
+
+**Status**: Not currently implemented. Requires significant computational resources and is beyond the scope of the initial research question. Could be explored in future work if memory inheritance experiments show promise.
+
+---
+
 ## Current Status
 
 **Phase:** Proof of concept complete
@@ -473,77 +606,15 @@ CONTEXT_WEIGHTS=40,30,20,10     # Hierarchy/High/Low/Peer
 
 ---
 
-## For Potential Collaborators
+## Research Questions
 
-If you're reading this because you're considering joining:
+This experiment tests:
+- Does Lamarckian memory inheritance produce demonstrable improvement over time?
+- Which memory compaction strategy (score-weighted, diversity-based, usage-based) works best?
+- How much inherited knowledge is optimal before diminishing returns?
+- Does knowledge accumulation across generations outperform single-agent learning?
+- Can compaction strategies themselves evolve through meta-optimization?
 
-**What this project is:**
-- An empirical test of hybrid evolutionary learning
-- A platform for comparing genetic algorithm strategies
-- Research into geometric agent coordination
-- A learning environment (I'm learning, you'd be learning)
+The core hypothesis: **Prompts are bad at encoding nuanced knowledge** (that's why we need RAG). So keep prompts stable and evolve the knowledge base instead.
 
-**What this project isn't:**
-- A production system (it's deliberately simplified)
-- A guaranteed success (it might not work)
-- A defined roadmap (research adapts)
-
-**What I value:**
-- Intellectual honesty ("I don't know" > speculation)
-- First-principles thinking (challenge assumptions)
-- Experimental rigor (measure, don't guess)
-- Willingness to fail (most experiments fail—that's research)
-
-**The interesting questions:**
-- Does Lamarckian inheritance work for AI agents?
-- Which memory compaction strategy produces best outcomes?
-- How much inherited knowledge is optimal? (Too little = wasted potential, too much = noise)
-- Does knowledge accumulation across generations beat single-agent learning?
-- Can compaction strategies themselves evolve?
-- Does geometric coordination actually help?
-
-If testing those questions interests you, dive in.
-
----
-
-## Documentation
-
-- **`README.md`**: This file (research overview)
-- **`docs/technical.md`**: Implementation details, setup, architecture
-- **`docs/NEXT_ITERATION.md`**: Design decisions and evolutionary strategy framework
-- **`docs/IMPLEMENTATION_ORCHESTRATION.md`**: Milestone breakdown, branch structure
-- **`CLAUDE.md`**: AI assistant guide
-
----
-
-## Final Thoughts
-
-This is research, not engineering. The goal is to test whether **Lamarckian memory inheritance**—where agents pass learned knowledge to offspring—produces demonstrable improvement over time.
-
-The hypothesis: prompts are the problem (that's why we need RAG). So keep prompts stable and evolve the knowledge base instead.
-
-Maybe it works. Maybe it doesn't. Either way, we'll have empirical answers instead of speculation.
-
-**Questions? Think the hypothesis is wrong? Want to suggest experiments?**
-
-Open an issue. Let's discuss.
-
----
-
-**HVAS Mini** — Evolution meets memory. Let's see what emerges.
-
----
-
-## Technical Details
-
-For installation, configuration, architecture documentation, and customization guides:
-
-→ **See [docs/technical.md](docs/technical.md)**
-
-**Quick Start:**
-```bash
-uv sync              # Install dependencies
-uv run python main.py  # Run proof of concept (5 generations)
-```
-
-**Requirements:** Python 3.11+, Anthropic API key, uv package manager
+Either it works or it doesn't. Both outcomes provide empirical data.
