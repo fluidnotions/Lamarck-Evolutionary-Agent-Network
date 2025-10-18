@@ -21,10 +21,13 @@ try:
         memory_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(memory_module)
         MemoryManager = memory_module.MemoryManager
+        generate_collection_name = memory_module.generate_collection_name
     else:
         # Fallback - MemoryManager might be defined elsewhere
         MemoryManager = None
+        generate_collection_name = None
 except Exception:
     MemoryManager = None
+    generate_collection_name = None
 
-__all__ = ["DecayCalculator", "MemoryPruner", "MemoryManager"]
+__all__ = ["DecayCalculator", "MemoryPruner", "MemoryManager", "generate_collection_name"]
