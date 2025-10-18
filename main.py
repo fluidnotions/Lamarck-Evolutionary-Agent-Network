@@ -21,11 +21,11 @@ async def main():
     # Test topics to show learning
     # Similar topics will benefit from stored memories
     topics = [
-        "introduction to machine learning",
-        "machine learning applications",  # Similar - will use memories
-        "python programming basics",
-        "python for data science",  # Similar - will use memories
-        "artificial intelligence ethics",
+        "why octopuses are basically aliens living in our oceans",
+        "the bizarre intelligence of cephalopods",  # Similar - will use memories
+        "the unexpected history of rubber ducks",
+        "how bath toys changed ocean science forever",  # Similar - will use memories
+        "what happens when you ban books in the age of the internet",
     ]
 
     console.print("\n[bold cyan]HVAS Mini - Hierarchical Vector Agent System[/bold cyan]")
