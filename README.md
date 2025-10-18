@@ -1,4 +1,6 @@
-# HVAS Mini - Evolutionary Agent Learning Research
+# Lamarck Evolutionary Agent Network (LEAN)
+
+**Evolutionary Agent Learning Research**
 
 ## The Core Question
 
@@ -204,7 +206,7 @@ vector(Child) = vector(Parent) + Δ(role)  # Semantic topology
 
 **This is the natural generalization of inheritance for probabilistic systems.**
 
-In HVAS:
+In this system:
 - **Distance encodes influence**: Closer agents (in embedding space) share more context
 - **Context becomes geometry**: Agents receive weighted information based on semantic proximity
 - **Coordination emerges from topology**: No hardcoded rules—just navigate the meaning-space
@@ -369,7 +371,7 @@ Statistical comparison:
 ### Project Structure
 
 ```
-src/hvas_mini/
+src/lean/  (currently lean during transition)
 ├── agents.py              # BaseAgent and role-specific agents
 ├── agent_pool.py          # AgentPool for population management
 ├── memory.py              # MemoryManager with ChromaDB
@@ -445,7 +447,7 @@ uv run pytest tests/ -v
 uv run pytest tests/test_memory.py -v
 
 # Run with coverage
-uv run pytest tests/ --cov=src/hvas_mini --cov-report=html
+uv run pytest tests/ --cov=src/lean --cov-report=html  # (will be src/lean)
 ```
 
 **Test Coverage Requirements**:

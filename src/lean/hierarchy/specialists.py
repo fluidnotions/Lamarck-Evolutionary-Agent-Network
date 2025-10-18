@@ -2,7 +2,7 @@
 Specialist agents - Layer 3 focused sub-task agents.
 """
 
-from hvas_mini.agents import BaseAgent
+from lean.agents import BaseAgent
 from typing import List, Dict
 
 

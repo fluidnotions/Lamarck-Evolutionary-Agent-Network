@@ -5,8 +5,8 @@ Analyzes system performance and proposes topology improvements.
 """
 
 from typing import Dict, List, Optional
-from hvas_mini.meta.metrics_monitor import MetricsMonitor
-from hvas_mini.meta.graph_mutator import GraphMutator, GraphMutation
+from lean.meta.metrics_monitor import MetricsMonitor
+from lean.meta.graph_mutator import GraphMutator, GraphMutation
 
 
 class MetaAgent:

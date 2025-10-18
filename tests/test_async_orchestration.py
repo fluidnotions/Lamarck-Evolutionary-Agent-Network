@@ -2,8 +2,8 @@
 
 import pytest
 import asyncio
-from hvas_mini.orchestration.async_coordinator import AsyncCoordinator
-from hvas_mini.state import create_initial_state
+from lean.orchestration.async_coordinator import AsyncCoordinator
+from lean.state import create_initial_state
 
 
 class MockAgent:

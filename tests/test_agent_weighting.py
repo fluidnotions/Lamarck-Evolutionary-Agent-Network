@@ -10,9 +10,9 @@ Tests the TrustManager integration:
 
 import pytest
 from typing import Dict
-from hvas_mini.state import BlogState, create_initial_state
-from hvas_mini.weighting.trust_manager import TrustManager
-from hvas_mini.weighting.weight_updates import (
+from lean.state import BlogState, create_initial_state
+from lean.weighting.trust_manager import TrustManager
+from lean.weighting.weight_updates import (
     calculate_performance_signal,
     update_all_weights,
 )

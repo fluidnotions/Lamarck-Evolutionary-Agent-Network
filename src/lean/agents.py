@@ -16,8 +16,8 @@ load_dotenv()
 
 # Import dependencies from other branches
 try:
-    from hvas_mini.state import BlogState
-    from hvas_mini.memory import MemoryManager
+    from lean.state import BlogState
+    from lean.memory import MemoryManager
 except ImportError:
     # For standalone development - use placeholder types
     from typing import TypedDict

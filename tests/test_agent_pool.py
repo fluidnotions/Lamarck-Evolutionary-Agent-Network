@@ -4,9 +4,9 @@ Tests for AgentPool class and agent pool management.
 
 import pytest
 import random
-from hvas_mini.agent_pool import AgentPool, create_agent_pool
-from hvas_mini.agents import IntroAgent
-from hvas_mini.memory import MemoryManager
+from lean.agent_pool import AgentPool, create_agent_pool
+from lean.agents import IntroAgent
+from lean.memory import MemoryManager
 
 
 @pytest.fixture

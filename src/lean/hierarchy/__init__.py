@@ -7,12 +7,12 @@ Provides the structure and agents for a 3-layer hierarchy:
 - Layer 3: Specialists (researcher, fact_checker, stylist)
 """
 
-from hvas_mini.hierarchy.structure import AgentHierarchy, AgentNode
-from hvas_mini.hierarchy.coordinator import CoordinatorAgent
-from hvas_mini.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
-from hvas_mini.hierarchy.factory import create_hierarchical_agents
-from hvas_mini.hierarchy.executor import HierarchicalExecutor
-from hvas_mini.hierarchy.semantic import (
+from lean.hierarchy.structure import AgentHierarchy, AgentNode
+from lean.hierarchy.coordinator import CoordinatorAgent
+from lean.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
+from lean.hierarchy.factory import create_hierarchical_agents
+from lean.hierarchy.executor import HierarchicalExecutor
+from lean.hierarchy.semantic import (
     compute_semantic_distance,
     filter_context_by_distance,
     compute_context_weights,

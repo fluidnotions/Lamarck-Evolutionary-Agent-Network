@@ -5,8 +5,8 @@ Demonstrates learning over multiple generations.
 """
 
 import asyncio
-from hvas_mini.pipeline import HVASMiniPipeline
-from hvas_mini.evaluation import calculate_overall_score
+from lean.pipeline import HVASMiniPipeline
+from lean.evaluation import calculate_overall_score
 from rich.console import Console
 from dotenv import load_dotenv
 

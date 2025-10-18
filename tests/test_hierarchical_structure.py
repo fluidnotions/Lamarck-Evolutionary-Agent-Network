@@ -3,12 +3,12 @@ Test suite for hierarchical structure (M6).
 """
 
 import pytest
-from hvas_mini.hierarchy.structure import AgentHierarchy, AgentNode
-from hvas_mini.hierarchy.coordinator import CoordinatorAgent
-from hvas_mini.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
-from hvas_mini.hierarchy.factory import create_hierarchical_agents
-from hvas_mini.state import create_hierarchical_state, AgentOutput
-from hvas_mini.memory import MemoryManager
+from lean.hierarchy.structure import AgentHierarchy, AgentNode
+from lean.hierarchy.coordinator import CoordinatorAgent
+from lean.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
+from lean.hierarchy.factory import create_hierarchical_agents
+from lean.state import create_hierarchical_state, AgentOutput
+from lean.memory import MemoryManager
 import tempfile
 import shutil
 

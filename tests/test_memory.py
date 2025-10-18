@@ -1,6 +1,6 @@
 """Tests for memory system."""
 
-from hvas_mini.memory import MemoryManager
+from lean.memory import MemoryManager
 import tempfile
 import shutil
 import pytest

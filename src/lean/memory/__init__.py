@@ -17,7 +17,7 @@ try:
     import importlib.util
     memory_file = Path(__file__).parent.parent / "memory.py"
     if memory_file.exists():
-        spec = importlib.util.spec_from_file_location("hvas_mini_memory_module", memory_file)
+        spec = importlib.util.spec_from_file_location("lean_memory_module", memory_file)
         memory_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(memory_module)
         MemoryManager = memory_module.MemoryManager

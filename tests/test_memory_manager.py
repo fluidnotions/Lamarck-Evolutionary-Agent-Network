@@ -5,7 +5,7 @@ Tests for MemoryManager with inheritance support.
 import pytest
 import tempfile
 import shutil
-from hvas_mini.memory import MemoryManager, generate_collection_name
+from lean.memory import MemoryManager, generate_collection_name
 
 
 @pytest.fixture
