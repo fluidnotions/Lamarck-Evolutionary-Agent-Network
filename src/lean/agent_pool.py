@@ -8,8 +8,8 @@ strategies and population statistics.
 from typing import List, Dict, Optional
 import random
 import uuid
-from hvas_mini.agents import BaseAgent, IntroAgent, BodyAgent, ConclusionAgent
-from hvas_mini.memory import MemoryManager
+from lean.agents import BaseAgent, IntroAgent, BodyAgent, ConclusionAgent
+from lean.memory import MemoryManager
 
 
 class AgentPool:

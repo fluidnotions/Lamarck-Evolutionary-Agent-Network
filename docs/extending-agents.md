@@ -21,8 +21,8 @@ This guide explains how to create new specialized agents and customize existing 
 Create a new agent by inheriting from `BaseAgent`:
 
 ```python
-from hvas_mini.agents import BaseAgent
-from hvas_mini.state import BlogState
+from lean.agents import BaseAgent
+from lean.state import BlogState
 from typing import List, Dict
 
 class TitleAgent(BaseAgent):
@@ -78,7 +78,7 @@ Title:\"\"\"
 
 ### Step 2: Update State Definition
 
-Add your new field to `BlogState` in `src/hvas_mini/state.py`:
+Add your new field to `BlogState` in `src/lean/state.py`:
 
 ```python
 class BlogState(TypedDict):
@@ -98,7 +98,7 @@ class BlogState(TypedDict):
 
 ### Step 3: Add to Agent Factory
 
-Update `create_agents()` in `src/hvas_mini/agents.py`:
+Update `create_agents()` in `src/lean/agents.py`:
 
 ```python
 def create_agents(persist_directory: str = "./data/memories") -> Dict[str, BaseAgent]:
@@ -121,7 +121,7 @@ def create_agents(persist_directory: str = "./data/memories") -> Dict[str, BaseA
 
 ### Step 4: Update Graph Workflow
 
-Modify the graph in `src/hvas_mini/pipeline.py`:
+Modify the graph in `src/lean/pipeline.py`:
 
 ```python
 def _build_graph(self) -> StateGraph:
@@ -150,7 +150,7 @@ def _build_graph(self) -> StateGraph:
 
 ### Step 5: Update Evaluation
 
-Add scoring for your new agent in `src/hvas_mini/evaluation.py`:
+Add scoring for your new agent in `src/lean/evaluation.py`:
 
 ```python
 class ContentEvaluator:
@@ -524,4 +524,4 @@ Report:\"\"\"
 
 - Explore [custom-evaluation.md](custom-evaluation.md) for scoring new agents
 - See [langgraph-patterns.md](langgraph-patterns.md) for advanced workflows
-- Review `src/hvas_mini/agents.py` for complete examples
+- Review `src/lean/agents.py` for complete examples

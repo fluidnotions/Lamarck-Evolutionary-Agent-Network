@@ -5,7 +5,7 @@ Tests for Tavily web search integration.
 import pytest
 import os
 from datetime import datetime, timedelta
-from hvas_mini.web_search import TavilySearchManager, SearchQuotaManager
+from lean.web_search import TavilySearchManager, SearchQuotaManager
 
 
 def test_quota_allocation():

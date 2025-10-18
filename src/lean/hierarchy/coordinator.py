@@ -2,9 +2,9 @@
 Coordinator agent - top-level orchestrator (Layer 1).
 """
 
-from hvas_mini.agents import BaseAgent
-from hvas_mini.hierarchy.structure import AgentHierarchy
-from hvas_mini.state import AgentOutput
+from lean.agents import BaseAgent
+from lean.hierarchy.structure import AgentHierarchy
+from lean.state import AgentOutput
 from typing import Dict, List, Any
 
 
@@ -81,7 +81,7 @@ Intent:"""
         Returns:
             {child_role: context_for_child}
         """
-        from hvas_mini.hierarchy.semantic import compute_semantic_distance, filter_context_by_distance
+        from lean.hierarchy.semantic import compute_semantic_distance, filter_context_by_distance
 
         contexts = {}
         intent = state["coordinator_intent"]

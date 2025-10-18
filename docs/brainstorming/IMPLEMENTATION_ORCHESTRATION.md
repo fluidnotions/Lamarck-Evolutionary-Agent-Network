@@ -44,7 +44,7 @@ M1: Core System (foundational)
 - Helper methods (get_top_n, get_random_lower_half)
 
 **Files**:
-- `src/hvas_mini/agent_pool.py` (NEW)
+- `src/lean/agent_pool.py` (NEW)
 - `tests/test_agent_pool.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/agent-pool-infrastructure/AGENT_TASK.md`
@@ -62,7 +62,7 @@ M1: Core System (foundational)
 - Store all experiences with metadata
 
 **Files**:
-- `src/hvas_mini/memory.py` (MODIFY)
+- `src/lean/memory.py` (MODIFY)
 - `tests/test_memory.py` (MODIFY)
 
 **AGENT_TASK.md location**: `docs/feature-plans/individual-memory-collections/AGENT_TASK.md`
@@ -80,7 +80,7 @@ M1: Core System (foundational)
 - Agent statistics API
 
 **Files**:
-- `src/hvas_mini/agents.py` (MODIFY)
+- `src/lean/agents.py` (MODIFY)
 - `tests/test_fitness_tracking.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/fitness-tracking/AGENT_TASK.md`
@@ -98,7 +98,7 @@ M1: Core System (foundational)
 - Forced diversity requirement
 
 **Files**:
-- `src/hvas_mini/context_manager.py` (NEW)
+- `src/lean/context_manager.py` (NEW)
 - `tests/test_context_distribution.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/context-distribution/AGENT_TASK.md`
@@ -116,8 +116,8 @@ M1: Core System (foundational)
 - Remove old mechanisms (trust manager, parameter evolution)
 
 **Files**:
-- `src/hvas_mini/pipeline.py` (MODIFY)
-- `src/hvas_mini/state.py` (MODIFY - simplify)
+- `src/lean/pipeline.py` (MODIFY)
+- `src/lean/state.py` (MODIFY - simplify)
 - `tests/test_pipeline_multi_agent.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/pipeline-integration/AGENT_TASK.md`
@@ -157,7 +157,7 @@ M1: Core System (foundational)
 - Mutation history tracking
 
 **Files**:
-- `src/hvas_mini/evolution/genome_mutation.py` (NEW)
+- `src/lean/evolution/genome_mutation.py` (NEW)
 - `tests/test_genome_mutation.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/genome-mutation/AGENT_TASK.md`
@@ -175,7 +175,7 @@ M1: Core System (foundational)
 - Lineage tracking
 
 **Files**:
-- `src/hvas_mini/evolution/reproduction.py` (NEW)
+- `src/lean/evolution/reproduction.py` (NEW)
 - `tests/test_reproduction.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/sexual-reproduction/AGENT_TASK.md`
@@ -193,7 +193,7 @@ M1: Core System (foundational)
 - Evolution cycle (every 10 generations)
 
 **Files**:
-- `src/hvas_mini/evolution/evolution_manager.py` (NEW)
+- `src/lean/evolution/evolution_manager.py` (NEW)
 - `tests/test_population_management.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/population-management/AGENT_TASK.md`
@@ -211,7 +211,7 @@ M1: Core System (foundational)
 - Update state tracking
 
 **Files**:
-- `src/hvas_mini/pipeline.py` (MODIFY)
+- `src/lean/pipeline.py` (MODIFY)
 - `tests/test_pipeline_evolution.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/evolution-pipeline-integration/AGENT_TASK.md`
@@ -251,8 +251,8 @@ M1: Core System (foundational)
 - Strategy factory
 
 **Files**:
-- `src/hvas_mini/strategies/base.py` (NEW)
-- `src/hvas_mini/strategies/__init__.py` (NEW)
+- `src/lean/strategies/base.py` (NEW)
+- `src/lean/strategies/__init__.py` (NEW)
 - `tests/test_strategy_abstraction.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/strategy-abstraction/AGENT_TASK.md`
@@ -270,9 +270,9 @@ M1: Core System (foundational)
 - Strategy-specific configurations
 
 **Files**:
-- `src/hvas_mini/strategies/conservative.py` (NEW)
-- `src/hvas_mini/strategies/aggressive.py` (NEW)
-- `src/hvas_mini/strategies/balanced.py` (NEW)
+- `src/lean/strategies/conservative.py` (NEW)
+- `src/lean/strategies/aggressive.py` (NEW)
+- `src/lean/strategies/balanced.py` (NEW)
 - `tests/test_baseline_strategies.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/baseline-strategies/AGENT_TASK.md`
@@ -290,8 +290,8 @@ M1: Core System (foundational)
 - Innovation rate calculation
 
 **Files**:
-- `src/hvas_mini/metrics/collector.py` (NEW)
-- `src/hvas_mini/metrics/analysis.py` (NEW)
+- `src/lean/metrics/collector.py` (NEW)
+- `src/lean/metrics/analysis.py` (NEW)
 - `tests/test_metrics.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/metric-collection/AGENT_TASK.md`
@@ -309,7 +309,7 @@ M1: Core System (foundational)
 - Results aggregation
 
 **Files**:
-- `src/hvas_mini/experiments/runner.py` (NEW)
+- `src/lean/experiments/runner.py` (NEW)
 - `tests/test_experiment_runner.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/parallel-execution-framework/AGENT_TASK.md`
@@ -350,7 +350,7 @@ M1: Core System (foundational)
 **Files**:
 - `experiments/topics.json` (NEW)
 - `experiments/config.yaml` (NEW)
-- `src/hvas_mini/utils/topic_classifier.py` (NEW)
+- `src/lean/utils/topic_classifier.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/experiment-configuration/AGENT_TASK.md`
 
@@ -367,7 +367,7 @@ M1: Core System (foundational)
 - Fallback to heuristic on error
 
 **Files**:
-- `src/hvas_mini/evaluation/llm_evaluator.py` (NEW)
+- `src/lean/evaluation/llm_evaluator.py` (NEW)
 - `tests/test_llm_evaluation.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/llm-evaluation/AGENT_TASK.md`
@@ -385,8 +385,8 @@ M1: Core System (foundational)
 - Report generation
 
 **Files**:
-- `src/hvas_mini/analysis/statistics.py` (NEW)
-- `src/hvas_mini/analysis/visualizations.py` (NEW)
+- `src/lean/analysis/statistics.py` (NEW)
+- `src/lean/analysis/visualizations.py` (NEW)
 - `tests/test_statistical_analysis.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/statistical-analysis/AGENT_TASK.md`
@@ -445,7 +445,7 @@ M1: Core System (foundational)
 
 **Files**:
 - `streamlit_app.py` (NEW)
-- `src/hvas_mini/dashboard/` (NEW directory)
+- `src/lean/dashboard/` (NEW directory)
 
 **AGENT_TASK.md location**: `docs/feature-plans/streamlit-dashboard/AGENT_TASK.md`
 
@@ -462,8 +462,8 @@ M1: Core System (foundational)
 - Search result incorporation
 
 **Files**:
-- `src/hvas_mini/search/allocator.py` (NEW)
-- `src/hvas_mini/search/provider.py` (NEW)
+- `src/lean/search/allocator.py` (NEW)
+- `src/lean/search/provider.py` (NEW)
 - `tests/test_search_integration.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/internet-search-integration/AGENT_TASK.md`
@@ -481,7 +481,7 @@ M1: Core System (foundational)
 - Strategy evolution cycle
 
 **Files**:
-- `src/hvas_mini/meta/strategy_evolution.py` (NEW)
+- `src/lean/meta/strategy_evolution.py` (NEW)
 - `tests/test_meta_evolution.py` (NEW)
 
 **AGENT_TASK.md location**: `docs/feature-plans/meta-evolution/AGENT_TASK.md`

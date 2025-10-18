@@ -15,13 +15,13 @@ load_dotenv()
 
 # Import dependencies from other branches
 try:
-    from hvas_mini.state import BlogState, create_initial_state
-    from hvas_mini.agents import create_agents
-    from hvas_mini.evaluation import ContentEvaluator
-    from hvas_mini.visualization import StreamVisualizer
-    from hvas_mini.orchestration.async_coordinator import AsyncCoordinator
-    from hvas_mini.weighting.trust_manager import TrustManager
-    from hvas_mini.weighting.weight_updates import update_all_weights
+    from lean.state import BlogState, create_initial_state
+    from lean.agents import create_agents
+    from lean.evaluation import ContentEvaluator
+    from lean.visualization import StreamVisualizer
+    from lean.orchestration.async_coordinator import AsyncCoordinator
+    from lean.weighting.trust_manager import TrustManager
+    from lean.weighting.weight_updates import update_all_weights
 except ImportError:
     # For standalone development
     print("Warning: Some dependencies not available in standalone mode")

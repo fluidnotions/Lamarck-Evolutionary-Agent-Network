@@ -7,7 +7,7 @@ how much context should be shared between agents in the hierarchy.
 
 import numpy as np
 from typing import List
-from hvas_mini.hierarchy.structure import AgentHierarchy
+from lean.hierarchy.structure import AgentHierarchy
 
 
 def compute_semantic_distance(

@@ -18,7 +18,7 @@ load_dotenv()
 
 # Import BlogState - will need state.py from state-management branch
 try:
-    from hvas_mini.state import BlogState
+    from lean.state import BlogState
 except ImportError:
     # For standalone development
     from typing import TypedDict

@@ -1,6 +1,6 @@
 """Tests for state management."""
 
-from hvas_mini.state import (
+from lean.state import (
     AgentMemory,
     BlogState,
     create_initial_state,

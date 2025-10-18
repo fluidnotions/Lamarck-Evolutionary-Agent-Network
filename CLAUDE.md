@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**HVAS Mini** is a research prototype exploring whether AI agents can learn from experience through:
+**LEAN (Lamarck Evolutionary Agent Network)** is a research prototype exploring whether AI agents can learn from experience through:
 - Individual RAG memory (ChromaDB) for storing successful outputs
 - Parameter evolution (temperature) based on performance scores
 - Hierarchical coordination through a 3-layer structure
@@ -74,9 +74,9 @@ Each agent, each generation:
 - **`evaluation.py`**: `ContentEvaluator` - multi-factor heuristic scoring
 - **`evolution.py`**: Temperature adjustment utilities
 - **`visualization.py`**: `StreamVisualizer` - Rich terminal UI
-- **`pipeline.py`**: `HVASMiniPipeline` - LangGraph StateGraph orchestration
+- **`pipeline.py`**: LangGraph StateGraph orchestration
 
-### Hierarchy Modules (`src/hvas_mini/hierarchy/`)
+### Hierarchy Modules (`src/lean/hierarchy/`)
 
 - **`structure.py`**: `AgentHierarchy` class - defines 3-layer parent-child relationships, semantic vectors
 - **`coordinator.py`**: `CoordinatorAgent` (Layer 1) - intent parsing, context distribution with semantic filtering, critique generation
@@ -97,10 +97,10 @@ uv run python main.py
 # Run tests
 uv run pytest                              # All tests
 uv run pytest tests/test_hierarchical_structure.py -v  # Specific file
-uv run pytest --cov=src/hvas_mini          # With coverage
+uv run pytest --cov=src/lean          # With coverage
 
 # Type checking
-uv run mypy src/hvas_mini
+uv run mypy src/lean
 ```
 
 ## Environment Setup
@@ -190,7 +190,9 @@ def evolve_parameters(self, score: float, state: BlogState):
 
 ### Extending Hierarchy
 
-Edit `src/hvas_mini/hierarchy/structure.py`:
+**Note**: The hierarchical architecture is part of the proof of concept. The current focus is on flat evolutionary agent pools with memory inheritance.
+
+Edit `src/lean/hierarchy/structure.py`:
 ```python
 self.nodes = {
     "coordinator": AgentNode(

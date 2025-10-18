@@ -299,7 +299,7 @@ Only add mechanisms if:
 ```python
 import streamlit as st
 import asyncio
-from hvas_mini.pipeline import HVASMiniPipeline
+from lean.pipeline import HVASMiniPipeline
 
 st.set_page_config(layout="wide", page_title="HVAS Mini")
 

@@ -5,8 +5,8 @@ Manages context distribution (downward) and result aggregation (upward).
 """
 
 from typing import Dict, List
-from hvas_mini.state import HierarchicalState, AgentOutput
-from hvas_mini.agents import BaseAgent
+from lean.state import HierarchicalState, AgentOutput
+from lean.agents import BaseAgent
 
 
 class HierarchicalExecutor:

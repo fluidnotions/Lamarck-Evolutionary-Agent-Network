@@ -4,16 +4,16 @@ Test suite for semantic distance weighting (M9).
 
 import pytest
 import numpy as np
-from hvas_mini.hierarchy.structure import AgentHierarchy
-from hvas_mini.hierarchy.semantic import (
+from lean.hierarchy.structure import AgentHierarchy
+from lean.hierarchy.semantic import (
     compute_semantic_distance,
     filter_context_by_distance,
     compute_context_weights,
     get_contextual_relevance,
     compute_similarity_matrix,
 )
-from hvas_mini.hierarchy.factory import create_hierarchical_agents
-from hvas_mini.state import create_hierarchical_state
+from lean.hierarchy.factory import create_hierarchical_agents
+from lean.state import create_hierarchical_state
 import tempfile
 import shutil
 

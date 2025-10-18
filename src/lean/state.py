@@ -10,7 +10,7 @@ from datetime import datetime
 
 # Import hierarchy structure
 try:
-    from hvas_mini.hierarchy.structure import AgentHierarchy
+    from lean.hierarchy.structure import AgentHierarchy
 except ImportError:
     AgentHierarchy = None
 

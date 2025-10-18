@@ -3,11 +3,11 @@ Factory for creating hierarchical agent instances.
 """
 
 from typing import Dict, Tuple
-from hvas_mini.agents import BaseAgent, IntroAgent, BodyAgent, ConclusionAgent
-from hvas_mini.hierarchy.coordinator import CoordinatorAgent
-from hvas_mini.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
-from hvas_mini.hierarchy.structure import AgentHierarchy
-from hvas_mini.memory import MemoryManager
+from lean.agents import BaseAgent, IntroAgent, BodyAgent, ConclusionAgent
+from lean.hierarchy.coordinator import CoordinatorAgent
+from lean.hierarchy.specialists import ResearchAgent, FactCheckerAgent, StyleAgent
+from lean.hierarchy.structure import AgentHierarchy
+from lean.memory import MemoryManager
 
 
 def create_hierarchical_agents(

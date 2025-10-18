@@ -1,8 +1,12 @@
-# HVAS Mini - Consolidated Architecture & Implementation Plan
+# LEAN - Consolidated Architecture & Implementation Plan
+
+**Lamarck Evolutionary Agent Network**
 
 > Last updated: 2025-10-18
 >
 > This document consolidates all brainstorming docs into a single reference for understanding the architecture and roadmap.
+>
+> **Note**: The project was previously named "HVAS Mini". References to that name in older worktree branches and historical documents refer to this same project.
 
 ---
 
@@ -362,11 +366,11 @@ uv run pytest tests/ -v
 uv run pytest tests/test_memory.py -v
 
 # Coverage report
-uv run pytest tests/ --cov=src/hvas_mini --cov-report=html
+uv run pytest tests/ --cov=src/lean --cov-report=html
 open htmlcov/index.html
 
 # Type checking
-uv run mypy src/hvas_mini
+uv run mypy src/lean
 ```
 
 ---

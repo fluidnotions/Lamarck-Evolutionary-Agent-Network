@@ -524,7 +524,7 @@ uv run pytest tests/ -v
 uv run pytest tests/test_memory_manager.py -v
 
 # With coverage
-uv run pytest tests/ --cov=src/hvas_mini --cov-report=html
+uv run pytest tests/ --cov=src/lean --cov-report=html
 
 # Coverage report location
 open htmlcov/index.html

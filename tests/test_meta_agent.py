@@ -5,9 +5,9 @@ Tests MetricsMonitor, GraphMutator, and MetaAgent functionality.
 """
 
 import pytest
-from hvas_mini.meta.metrics_monitor import MetricsMonitor
-from hvas_mini.meta.graph_mutator import GraphMutator, MutationType
-from hvas_mini.meta.meta_agent import MetaAgent, create_meta_agent
+from lean.meta.metrics_monitor import MetricsMonitor
+from lean.meta.graph_mutator import GraphMutator, MutationType
+from lean.meta.meta_agent import MetaAgent, create_meta_agent
 
 
 class TestMetricsMonitor:

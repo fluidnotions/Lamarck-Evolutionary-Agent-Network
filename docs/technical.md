@@ -271,7 +271,7 @@ hvas-mini/
 │   ├── custom-evaluation.md    # Evaluation system customization
 │   └── langgraph-patterns.md   # Advanced LangGraph workflows
 │
-├── src/hvas_mini/              # Main package
+├── src/lean/              # Main package
 │   ├── __init__.py
 │   ├── state.py                # State definitions
 │   ├── memory.py               # MemoryManager (ChromaDB + RAG)
@@ -316,7 +316,7 @@ uv run pytest tests/test_agents.py -v
 ### Run with Coverage
 
 ```bash
-uv run pytest --cov=src/hvas_mini
+uv run pytest --cov=src/lean
 ```
 
 ### Run Integration Tests Only
@@ -328,7 +328,7 @@ uv run pytest -m integration
 ### Type Checking
 
 ```bash
-uv run mypy src/hvas_mini
+uv run mypy src/lean
 ```
 
 ### Test Organization
@@ -594,10 +594,10 @@ uv run python main.py
 uv run pytest tests/test_agents.py -v
 
 # Run with coverage
-uv run pytest --cov=src/hvas_mini
+uv run pytest --cov=src/lean
 
 # Type checking
-uv run mypy src/hvas_mini
+uv run mypy src/lean
 
 # Import verification
 uv run python test_imports.py

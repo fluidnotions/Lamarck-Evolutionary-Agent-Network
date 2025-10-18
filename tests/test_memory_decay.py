@@ -10,7 +10,7 @@ Tests the time-based memory relevance decay:
 
 import pytest
 from datetime import datetime, timedelta
-from hvas_mini.memory.decay import DecayCalculator, MemoryPruner
+from lean.memory.decay import DecayCalculator, MemoryPruner
 
 
 class TestDecayCalculator:

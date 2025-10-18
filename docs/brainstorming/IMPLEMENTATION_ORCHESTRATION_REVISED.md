@@ -80,7 +80,7 @@ M1: Core System (foundational)
 - **NEW**: Separate personal vs inherited memories
 
 **Files**:
-- `src/hvas_mini/memory.py` (MODIFY)
+- `src/lean/memory.py` (MODIFY)
 - `tests/test_memory.py` (MODIFY)
 
 **Key Implementation Change**:
@@ -183,7 +183,7 @@ class MemoryManager:
 - LLM distillation (optional)
 
 **Files**:
-- `src/hvas_mini/evolution/memory_compaction.py` (NEW)
+- `src/lean/evolution/memory_compaction.py` (NEW)
 - `tests/test_memory_compaction.py` (NEW)
 
 **Implementation**:
@@ -290,7 +290,7 @@ class MemoryCompactor:
 - **MINIMAL** prompt variation (optional diversity)
 
 **Files**:
-- `src/hvas_mini/evolution/reproduction.py` (NEW)
+- `src/lean/evolution/reproduction.py` (NEW)
 - `tests/test_reproduction.py` (NEW)
 
 **Implementation**:

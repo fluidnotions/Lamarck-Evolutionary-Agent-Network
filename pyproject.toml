@@ -1,7 +1,7 @@
 [project]
-name = "hvas-mini"
+name = "lean"
 version = "0.1.0"
-description = "HVAS Mini Prototype - Hierarchical Vector Agent System with LangGraph"
+description = "LEAN - Lamarck Evolutionary Agent Network"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

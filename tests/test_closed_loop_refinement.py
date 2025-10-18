@@ -3,9 +3,9 @@ Test suite for closed-loop refinement (M8).
 """
 
 import pytest
-from hvas_mini.hierarchy.executor import HierarchicalExecutor
-from hvas_mini.hierarchy.factory import create_hierarchical_agents
-from hvas_mini.state import create_hierarchical_state, AgentOutput
+from lean.hierarchy.executor import HierarchicalExecutor
+from lean.hierarchy.factory import create_hierarchical_agents
+from lean.state import create_hierarchical_state, AgentOutput
 import tempfile
 import shutil
 import os

@@ -50,7 +50,7 @@ Generation → Evaluation → Decision
 
 ### Modifying Existing Scores
 
-Edit `src/hvas_mini/evaluation.py`:
+Edit `src/lean/evaluation.py`:
 
 ```python
 def _score_intro(self, intro: str, topic: str) -> float:
@@ -685,4 +685,4 @@ class StorytellingEvaluator(ContentEvaluator):
 
 - Explore [extending-agents.md](extending-agents.md) for creating new agents
 - See [langgraph-patterns.md](langgraph-patterns.md) for evaluation node patterns
-- Review `src/hvas_mini/evaluation.py` for complete implementation
+- Review `src/lean/evaluation.py` for complete implementation
