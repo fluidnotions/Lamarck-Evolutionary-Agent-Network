@@ -135,9 +135,9 @@ Each agent, each generation:
 
 ## Memory Compaction Strategies
 
-Instead of committing to one compaction approach, we're **testing multiple strategies in parallel** to empirically determine which inheritance mechanism works best.
+Instead of committing to one compaction approach, we implement the **Strategy Pattern** to test multiple inheritance mechanisms in parallel. Each strategy encapsulates different decisions about selection, compaction, and evolution.
 
-### Three Baseline Strategies
+### Three Baseline Strategies (A/B Testing)
 
 #### Strategy A: Score-Weighted Selection
 ```python
@@ -316,7 +316,21 @@ Three agent roles working sequentially:
 Each role has 5 competing agents (15 total population).
 
 ### Test Dataset
+ 
+ 1. **Tracing Thought: How Neural Activation Maps Reveal Machine Cognition**  
+   Baseline post exploring mechanistic interpretability — how activation pathways can be visualized and analyzed to understand “how models think.” References research like Google’s *Activation Atlas* and Anthropic’s *circuits* work.
 
+2. **Evolving Insight: Can AI Learn to Interpret Itself?**  
+   Builds on post #1 by theorizing self-interpreting agents capable of evolving their own activation tracing tools. Tests retention and reapplication of interpretability concepts.
+
+3. **Quantum Selection: What Evolution Might Look Like in Quantum AI**  
+   Shifts domain to quantum computing. Examines whether evolutionary optimization could operate within quantum latent spaces and whether “fitness” can exist in probabilistic computation.
+
+4. **Quantum Minds and Digital Species: Evolution Beyond Classical Computation**  
+   Extends #3 by blending quantum theory with evolutionary biology. Explores analogies like coherence as a survival trait and entanglement as a form of digital symbiosis.
+
+5. **The Evolution of Understanding: From Biological Brains to Self-Explaining Machines**  
+   Integrative post that synthesizes biological, quantum, and AI-evolution ideas. Tests the model’s ability to unify concepts from all previous posts into a coherent narrative about machine cognition.
 
 
 ### Execution
@@ -349,7 +363,32 @@ Statistical comparison:
 - **Anthropic Claude**: LLM for generation and evaluation
 - **ChromaDB**: Vector database (separate collection per agent)
 - **sentence-transformers**: Embeddings for semantic similarity
-- **Streamlit**: Dashboard for monitoring (Milestone 5)
+- **Tavily**: Web search for external knowledge
+- **Streamlit**: Dashboard for monitoring (future)
+
+### Project Structure
+
+```
+src/hvas_mini/
+├── agents.py              # BaseAgent and role-specific agents
+├── agent_pool.py          # AgentPool for population management
+├── memory.py              # MemoryManager with ChromaDB
+├── evaluation.py          # ContentEvaluator scoring
+├── pipeline.py            # LangGraph workflow orchestration
+├── state.py               # BlogState and AgentMemory models
+├── web_search.py          # Tavily search integration
+├── hierarchy/             # Hierarchical coordination (legacy)
+├── memory/                # Memory decay utilities
+├── weighting/             # Trust-based weighting (legacy)
+├── orchestration/         # Async coordination (legacy)
+└── meta/                  # Graph optimization (legacy)
+
+tests/
+├── test_agent_pool.py           # Agent pool tests
+├── test_memory.py               # Memory system tests
+├── test_hierarchical_*.py       # Hierarchy tests
+└── ...                          # Additional test modules
+```
 
 ### Architecture
 
@@ -370,14 +409,6 @@ Statistical comparison:
 [ChromaDB] [ChromaDB] [ChromaDB]
 15 isolated collections
 ```
-
-### Implementation Roadmap
-
-**Milestone 1 (Core System)**: Agent pools, fitness tracking, context distribution, memory inheritance structure
-**Milestone 2 (Evolution)**: Memory compaction, reproduction, population dynamics
-**Milestone 3 (Strategies)**: Compaction strategy abstraction, 3 baseline implementations
-**Milestone 4 (Experimentation)**: 100-gen runs, statistical analysis, lineage tracking
-**Milestone 5 (Enhancement)**: Dashboard, search integration, meta-evolution of compaction strategies
 
 ---
 
@@ -400,8 +431,7 @@ cp .env.example .env
 uv run python main.py
 ```
 
-**Current version** runs basic learning demonstration (5 topics, single agent per role).
-**Next version** (Milestone 1-4) will run full evolutionary experiments.
+**Current version** runs basic learning demonstration with evolutionary agent pools.
 
 ### Running Tests
 
@@ -587,34 +617,31 @@ else:
 
 ## Current Status
 
-**Phase:** Proof of concept complete
-**Next:** Milestone 1 implementation (agent pools, context distribution)
+**Implementation Progress:**
+- ✅ Agent pool infrastructure (5 agents per role)
+- ✅ Individual memory collections with inheritance support
+- ✅ Web search integration (Tavily)
+- ⏳ Fitness tracking and specialization detection
+- ⏳ Context distribution system (40/30/20/10 weighting)
+- ⏳ Evolutionary workflow integration
 
-**Proof of concept demonstrates:**
-- ✅ Individual agent memory (ChromaDB)
-- ✅ Parameter evolution (temperature adjustment)
-- ✅ Transfer learning (semantic memory retrieval)
-- ✅ Real-time visualization
-
-**Milestone 1-4 will implement:**
-- Agent populations (5 per role)
-- Memory inheritance (inherited + personal memories)
-- Memory compaction strategies (score-weighted, diversity-based, usage-based)
-- Reproduction with knowledge transfer
-- 100-generation experiments
-- Lineage tracking and statistical comparison
+**Working Features:**
+- Individual agent memory (ChromaDB with isolated collections)
+- Transfer learning (semantic memory retrieval)
+- Real-time visualization
+- Web search for external knowledge
 
 ---
 
-## Research Questions
+## Research Objectives
 
-This experiment tests:
+This experiment investigates:
 - Does Lamarckian memory inheritance produce demonstrable improvement over time?
 - Which memory compaction strategy (score-weighted, diversity-based, usage-based) works best?
 - How much inherited knowledge is optimal before diminishing returns?
 - Does knowledge accumulation across generations outperform single-agent learning?
 - Can compaction strategies themselves evolve through meta-optimization?
 
-The core hypothesis: **Prompts are bad at encoding nuanced knowledge** (that's why we need RAG). So keep prompts stable and evolve the knowledge base instead.
+**Core hypothesis:** Prompts are bad at encoding nuanced knowledge (that's why we need RAG). So keep prompts stable and evolve the knowledge base instead.
 
-Either it works or it doesn't. Both outcomes provide empirical data.
+**Approach:** Empirical testing with statistical analysis. Both positive and negative results provide valuable data.
