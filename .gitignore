@@ -41,6 +41,7 @@ uv.lock
 
 # ChromaDB / Data
 data/
+demo_data/
 *.db
 *.sqlite
 *.sqlite3
