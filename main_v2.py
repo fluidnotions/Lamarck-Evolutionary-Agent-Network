@@ -34,35 +34,66 @@ async def main():
         print("Please set your API key in the .env file")
         return
 
-    # Initialize pipeline
-    print("Initializing pipeline...")
+    # Initialize pipeline with M2 evolution
+    print("Initializing evolutionary pipeline...")
+
+    POPULATION_SIZE = 3  # Agents per role
+    EVOLUTION_FREQUENCY = 5  # Evolve every N generations
+    TOTAL_GENERATIONS = 20  # Total generations to run
+
     pipeline = PipelineV2(
         reasoning_dir="./data/reasoning",
         shared_rag_dir="./data/shared_rag",
-        agent_ids={
-            'intro': 'agent_1',
-            'body': 'agent_1',
-            'conclusion': 'agent_1'
-        },
-        domain="General"
+        domain="General",
+        population_size=POPULATION_SIZE,
+        evolution_frequency=EVOLUTION_FREQUENCY
     )
 
-    print("✅ Pipeline V2 initialized")
-    print("  - Using BaseAgentV2 agents")
-    print("  - Reasoning patterns + Shared RAG")
-    print("  - 8-step learning cycle")
+    print("✅ Pipeline V2 initialized with M2 Evolution")
+    print(f"  - Population: {POPULATION_SIZE} agents per role")
+    print(f"  - Evolution frequency: every {EVOLUTION_FREQUENCY} generations")
+    print(f"  - Total generations: {TOTAL_GENERATIONS}")
+    print("  - Using reasoning patterns + shared RAG")
+    print("  - Full 8-step learning cycle with inheritance")
     print()
 
-    # Define topics (alternating similar topics to test learning)
+    # Define topics - pairs of similar topics to test transfer learning
+    # Evolution happens at gen 5, 10, 15, 20
+    # Similar topics test if inherited reasoning helps on related content
     topics = [
+        # Block 1: AI fundamentals (gens 1-4, before first evolution)
         "The Future of Artificial Intelligence",
         "Machine Learning Fundamentals",
         "Neural Networks Explained",
-        "Deep Learning Applications",
-        "AI Safety and Ethics",
+        "Deep Learning Basics",
+
+        # Block 2: After first evolution (gen 5)
+        "AI in Healthcare Applications",  # Similar to previous
+        "Medical Diagnosis with Machine Learning",
+        "Neural Networks for Patient Care",
+        "Deep Learning in Medical Imaging",
+        "AI-Powered Drug Discovery",
+
+        # Block 3: After second evolution (gen 10)
+        "The Ethics of Artificial Intelligence",
+        "AI Safety and Alignment",
+        "Machine Learning Bias and Fairness",
+        "Responsible AI Development",
+        "AI Governance Frameworks",
+
+        # Block 4: After third evolution (gen 15)
+        "Climate Change and AI Solutions",
+        "Machine Learning for Environmental Science",
+        "Neural Networks Predicting Weather",
+        "Deep Learning for Sustainability",
+        "AI-Driven Climate Modeling",
     ]
 
-    print(f"Running {len(topics)} generations...\n")
+    # Limit to requested generations
+    topics = topics[:TOTAL_GENERATIONS]
+
+    print(f"Running {len(topics)} generations with evolutionary learning...")
+    print(f"Evolution events at generations: {', '.join(str(i) for i in range(EVOLUTION_FREQUENCY, TOTAL_GENERATIONS + 1, EVOLUTION_FREQUENCY))}\n")
 
     results = []
 
@@ -109,14 +140,16 @@ async def main():
         topic_short = result['topic'][:35].ljust(35)
         print(f" {result['generation']}  | {topic_short} |   {result['avg_score']:.2f}    |    {result['reasoning_patterns_used']}     |     {result['domain_knowledge_used']}")
 
-    # Agent statistics
-    print("\nAgent Statistics:")
-    agent_stats = pipeline.get_agent_stats()
-    for role, stats in agent_stats.items():
-        print(f"\n{role.capitalize()}:")
-        print(f"  Tasks: {stats['task_count']}, Avg Fitness: {stats['avg_fitness']:.2f}")
-        print(f"  Reasoning patterns: {stats['reasoning_patterns']} "
-              f"(personal: {stats['personal_patterns']}, inherited: {stats['inherited_patterns']})")
+    # Pool statistics (M2 evolution)
+    print("\nEvolutionary Pool Statistics:")
+    pool_stats = pipeline.get_agent_stats()
+    for role, stats in pool_stats.items():
+        print(f"\n{role.capitalize()} Pool:")
+        print(f"  Generation: {stats['generation']}")
+        print(f"  Pool size: {stats['pool_size']} agents")
+        print(f"  Avg fitness: {stats['avg_fitness']:.2f}")
+        print(f"  Top agent fitness: {stats['top_agent_fitness']:.2f}")
+        print(f"  Diversity: {stats['diversity']:.3f}")
 
     # Shared RAG
     print("\nShared RAG:")
@@ -124,23 +157,52 @@ async def main():
     print(f"  Total knowledge: {rag_stats['total_knowledge']}")
     print(f"  By source: {rag_stats['by_source']}")
 
-    # Learning improvement
+    # Evolution impact analysis
+    print("\nEvolutionary Learning Analysis:")
+
+    # Compare performance before and after each evolution
+    evolution_points = list(range(EVOLUTION_FREQUENCY, TOTAL_GENERATIONS + 1, EVOLUTION_FREQUENCY))
+
+    for i, evo_gen in enumerate(evolution_points):
+        if evo_gen < len(results):
+            # Pre-evolution (last 2 gens before evolution)
+            pre_start = max(0, evo_gen - EVOLUTION_FREQUENCY)
+            pre_end = evo_gen
+            pre_scores = [r['avg_score'] for r in results[pre_start:pre_end]]
+            pre_avg = sum(pre_scores) / len(pre_scores) if pre_scores else 0
+
+            # Post-evolution (first 2 gens after evolution)
+            post_start = evo_gen
+            post_end = min(len(results), evo_gen + 2)
+            post_scores = [r['avg_score'] for r in results[post_start:post_end]]
+            post_avg = sum(post_scores) / len(post_scores) if post_scores else 0
+
+            improvement = post_avg - pre_avg
+
+            print(f"\nEvolution {i+1} (generation {evo_gen}):")
+            print(f"  Pre-evolution avg:  {pre_avg:.2f}")
+            print(f"  Post-evolution avg: {post_avg:.2f}")
+            print(f"  Change: {improvement:+.2f} points {'✅' if improvement > 0 else '⚠️'}")
+
+    # Overall trend
     if len(results) >= 2:
         first_avg = results[0]['avg_score']
         last_avg = results[-1]['avg_score']
-        improvement = last_avg - first_avg
+        total_improvement = last_avg - first_avg
 
-        print(f"\nLearning Improvement:")
-        print(f"  First generation: {first_avg:.2f}")
-        print(f"  Last generation: {last_avg:.2f}")
-        print(f"  Change: {improvement:+.2f} points")
+        print(f"\nOverall Learning Trend:")
+        print(f"  Generation 1 avg:  {first_avg:.2f}")
+        print(f"  Generation {len(results)} avg: {last_avg:.2f}")
+        print(f"  Total improvement: {total_improvement:+.2f} points")
 
-        if improvement > 0:
-            print(f"  ✅ Agents improved!")
-        elif improvement < 0:
-            print(f"  ⚠️  Scores decreased (may indicate exploration)")
+        if total_improvement > 0.5:
+            print(f"  ✅ Strong positive learning detected!")
+        elif total_improvement > 0:
+            print(f"  ✅ Modest improvement observed")
+        elif total_improvement < -0.5:
+            print(f"  ⚠️  Performance decreased (exploration phase?)")
         else:
-            print(f"  → Scores stable")
+            print(f"  → Stable performance")
 
     print("\n" + "="*70)
     print("  Experiment Complete")
