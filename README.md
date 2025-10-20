@@ -1,4 +1,4 @@
-# Lamarck Evolutionary Agent Network (LEAN)
+# Lamarck Evolutionary Agent Network
 
 **Evolutionary Agent Learning Research**
 
