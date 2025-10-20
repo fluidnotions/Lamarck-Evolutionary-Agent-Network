@@ -1,0 +1,1384 @@
+
+ ▐▛███▜▌   Claude Code v2.0.22
+▝▜█████▛▘  Sonnet 4.5 · Claude Max
+  ▘▘ ▝▝    /home/justin/Documents/dev/workspaces/hvas-mini
+
+> There were some aspects of the framework which were a little bit fuzzy in terms of what the memories were, if they were content. Then it 
+wouldn't really make sense because you couldn't apply them unless the content was related. And since this example writes multiple articles 
+on different concepts, that made no sense. So I refined the concepts in the readme and I need you to update the coordinated plan in 
+accordance with that and then figure out which branches are still valid. @README.md @docs/planning/CONSOLIDATED_PLAN.md 
+  ⎿  Read README.md (515 lines)
+  ⎿  Read docs/planning/CONSOLIDATED_PLAN.md (476 lines)
+
+● I'll analyze the conceptual refinement in the README and update the CONSOLIDATED_PLAN accordingly, then assess branch validity.
+
+  Key Conceptual Shift
+
+  The README now makes a critical distinction:
+
+  OLD (fuzzy): Memories = content/outputs that worked
+  NEW (clear): Memories = reasoning patterns, not content
+
+  Three-Layer Architecture (from README)
+
+  1. Fixed Prompts (Interface) - Never changes
+  2. Shared RAG (Knowledge) - Domain facts, available to all agents
+  3. Evolving Reasoning (Cognition) - Planning strategies, inherited through generations
+
+  Let me update the CONSOLIDATED_PLAN and assess branches:
+
+● Read(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Read 476 lines
+
+● Now I'll update the CONSOLIDATED_PLAN to align with the reasoning-pattern-based architecture and assess branch validity:
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 5 additions and 3 removals                                                         
+       12    
+       13    ## Executive Summary
+       14    
+       15 -  **Research Question**: Can AI agents improve by inheriting their parents' learned knowledge?
+       15 +  **Research Question**: Can AI agents improve by inheriting their parents' reasoning patterns?
+       16    
+       17 -  **Core Mechanism**: Lamarckian evolution - stable prompts + inherited memories + natural selection
+       17 +  **Core Mechanism**: Lamarckian evolution - stable prompts + inherited reasoning strategies + natural selection
+       18    
+       19 -  **Status**: Proof of concept complete, M1 partially complete (3/5 branches merged)
+       19 +  **Critical Insight**: We're evolving **how agents think** (reasoning patterns), not what they know (content goes to shared 
+          + RAG)
+       20    
+       21 +  **Status**: Proof of concept complete, M1 partially complete (3/5 branches merged) - **NEEDS REVISION for reasoning-pattern
+          +  architecture**
+       22 +  
+       23    ---
+       24    
+       25    ## The Architecture (What We're Building)
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 49 additions and 13 removals                                    
+       24    
+       25    ## The Architecture (What We're Building)
+       26    
+       27 +  ### Three-Layer Separation of Concerns
+       28 +  
+       29 +  **This is the foundational design principle:**
+       30 +  
+       31 +  ```
+       32 +  ┌─────────────────────────────────────────┐
+       33 +  │  Layer 1: Fixed Prompts (Interface)     │
+       34 +  │  "You are an intro writer"              │
+       35 +  │  - Never changes, never mutates          │
+       36 +  │  - Stable behavioral interface           │
+       37 +  └────────────────┬────────────────────────┘
+       38 +                   │
+       39 +  ┌────────────────▼────────────────────────┐
+       40 +  │  Layer 2: Shared RAG (Knowledge)        │
+       41 +  │  Domain facts, content, references      │
+       42 +  │  - Available to all agents equally       │
+       43 +  │  - Standard semantic retrieval           │
+       44 +  └────────────────┬────────────────────────┘
+       45 +                   │
+       46 +  ┌────────────────▼────────────────────────┐
+       47 +  │  Layer 3: Evolving Reasoning (What      │
+       48 +  │            Gets Inherited)               │
+       49 +  │  - Planning sequences                    │
+       50 +  │  - Problem-solving strategies            │
+       51 +  │  - Reasoning traces                      │
+       52 +  │  - Retrieved by structural similarity    │
+       53 +  │  - Per-agent ChromaDB collections        │
+       54 +  └─────────────────────────────────────────┘
+       55 +  ```
+       56 +  
+       57 +  **Critical Distinction:**
+       58 +  - **Layer 1 (Prompts)**: WHAT agents should do
+       59 +  - **Layer 2 (Shared RAG)**: WHAT agents know
+       60 +  - **Layer 3 (Reasoning)**: HOW agents think (this is what evolves!)
+       61 +  
+       62    ### Core Principles
+       63    
+       64 -  1. **Stable Prompts**: Genome (prompt templates) stays mostly unchanged
+       64 +  1. **Frozen Prompts**: Interface layer stays completely unchanged
+       65       - "You are an intro writer" never changes
+       66       - Avoids prompt engineering fragility
+       67 -     - Consistent behavior interface
+       67 +     - Consistent behavior interface across all generations
+       68    
+       69 -  2. **Memory Inheritance**: Offspring inherit compacted parent memories
+       70 -     - 50-100 inherited memories from parents
+       71 -     - 50-150 personal memories from own experience
+       72 -     - Total: ~100-250 memories per agent
+       69 +  2. **Reasoning Pattern Inheritance**: Offspring inherit cognitive strategies
+       70 +     - 50-100 inherited reasoning patterns from parents
+       71 +     - 50-150 personal reasoning patterns from own experience
+       72 +     - Total: ~100-250 reasoning patterns per agent
+       73 +     - **NOT content**: Domain knowledge goes to shared RAG
+       74    
+       75 -  3. **Natural Selection**: Best performers reproduce, poor performers removed
+       75 +  3. **Natural Selection**: Best reasoners reproduce, poor performers removed
+       76       - ε-greedy, tournament, or fitness-weighted selection
+       77       - Evolution every 10 generations
+       78 -     - Add agents when diversity drops
+       78 +     - Add agents when reasoning diversity drops
+       79       - Remove agents when fitness < 6.0 (after 20+ tasks)
+       80    
+       81 -  4. **Context is Additive, Not Selective**: High performers broadcast more, but everyone receives equally
+       82 -     - 40% from hierarchy (coordinator/parent)
+       83 -     - 30% from high-credibility cross-role agents
+       84 -     - 20% from random low-performer (forced diversity)
+       85 -     - 10% from same-role peer
+       81 +  4. **Reasoning Context Distribution**: Agents share cognitive traces
+       82 +     - 40% reasoning traces from hierarchy (coordinator/parent)
+       83 +     - 30% reasoning traces from high-credibility cross-role agents
+       84 +     - 20% reasoning traces from random low-performer (forced diversity)
+       85 +     - 10% reasoning traces from same-role peer
+       86    
+       87    ### Population Structure
+       88    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 7 additions and 4 removals   
+        96    ├─ intro_agent_4        ├─ body_agent_4        ├─ conclusion_agent_4
+        97    └─ intro_agent_5        └─ body_agent_5        └─ conclusion_agent_5
+        98    
+        99 -  Each agent has isolated ChromaDB collection:
+       100 -  - intro_agent_1_memories
+       101 -  - intro_agent_2_memories
+       102 -  - ... (15 total collections)
+        99 +  Each agent has isolated ChromaDB collection for REASONING PATTERNS:
+       100 +  - intro_agent_1_reasoning  (planning steps, cognitive strategies)
+       101 +  - intro_agent_2_reasoning  (not content, but how to think)
+       102 +  - ... (15 total reasoning collections)
+       103 +  
+       104 +  Separate shared RAG for domain knowledge:
+       105 +  - shared_rag_collection (facts, content, references for all agents)
+       106    ```
+       107    
+       108    ### The Learning Cycle
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 41 additions and 17 removals                     
+       111    For each generation, each agent:
+       112    
+       113    1. START WITH INHERITANCE
+       114 -     ↓ Already has 50-100 compacted memories from parents
+       114 +     ↓ Already has 50-100 compacted REASONING PATTERNS from parents
+       115 +     ↓ (planning strategies that worked for parents)
+       116    
+       117 -  2. RECEIVE CONTEXT (40/30/20/10)
+       118 -     ↓ Weighted context from hierarchy + high-performers + diversity + peers
+       117 +  2. PLAN APPROACH
+       118 +     ↓ Query own reasoning patterns for similar tasks
+       119 +     ↓ "How did I/my parents solve problems like this?"
+       120    
+       121 -  3. RETRIEVE MEMORIES
+       122 -     ↓ Query own collection: inherited + personal
+       123 -     ↓ Weighted by: similarity × (score/10)
+       121 +  3. RETRIEVE KNOWLEDGE
+       122 +     ↓ Query shared RAG for domain facts/content
+       123 +     ↓ (separate from reasoning patterns)
+       124    
+       125 -  4. GENERATE CONTENT
+       126 -     ↓ Stable prompt + retrieved memories + received context
+       125 +  4. RECEIVE CONTEXT (40/30/20/10)
+       126 +     ↓ Get reasoning traces from other agents
+       127 +     ↓ (how they approached their tasks, not what they produced)
+       128    
+       129 -  5. EVALUATE (LLM scoring)
+       130 -     ↓ Engagement, clarity, depth, informativeness
+       129 +  5. GENERATE
+       130 +     ↓ Fixed prompt + evolved reasoning patterns + domain knowledge + reasoning context
+       131    
+       132 -  6. STORE (ALL experiences)
+       133 -     ↓ Add to personal memory bank with score
+       132 +  6. EVALUATE (LLM scoring)
+       133 +     ↓ Quality of output (engagement, clarity, depth, informativeness)
+       134    
+       135 -  7. EVOLVE (every 10 generations)
+       136 -     ├─ SELECTION: Choose best agents as parents
+       137 -     ├─ COMPACTION: Merge + distill parents' memories
+       138 -     ├─ REPRODUCTION: Child inherits compacted knowledge
+       139 -     └─ POPULATION MGMT: Add/remove agents based on performance
+       135 +  7. STORE REASONING PATTERN
+       136 +     ↓ Store planning steps + execution trace + score
+       137 +     ↓ (NOT the content - that goes to shared RAG if needed)
+       138 +  
+       139 +  8. EVOLVE (every 10 generations)
+       140 +     ├─ SELECTION: Choose best reasoners as parents
+       141 +     ├─ COMPACTION: Merge + distill parents' cognitive strategies
+       142 +     ├─ REPRODUCTION: Child inherits compacted reasoning patterns
+       143 +     └─ POPULATION MGMT: Add/remove agents based on reasoning effectiveness
+       144    ```
+       145    
+       146 +  **Example of what gets stored in step 7:**
+       147 +  ```python
+       148 +  {
+       149 +      "planning_steps": [
+       150 +          "First establish context with historical example",
+       151 +          "Then introduce 3-5 supporting statistics",
+       152 +          "Finally pose thought-provoking question"
+       153 +      ],
+       154 +      "execution_trace": "Used WWII example, included 3 economic stats, asked 'What if?'",
+       155 +      "context_type": "technical_audience",
+       156 +      "score": 8.5,
+       157 +      "retrieval_count": 12,
+       158 +      "generation": 5
+       159 +  }
+       160 +  # NOT stored: the actual paragraph content
+       161 +  ```
+       162 +  
+       163    ### Memory Compaction Strategies (Testing 3 in Parallel)
+       164    
+       165    **Strategy A: Score-Weighted (Quality-focused)**
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 7 additions and 7 removals  
+       160    # NOT stored: the actual paragraph content
+       161    ```
+       162    
+       163 -  ### Memory Compaction Strategies (Testing 3 in Parallel)
+       163 +  ### Reasoning Pattern Compaction Strategies (Testing 3 in Parallel)
+       164    
+       165    **Strategy A: Score-Weighted (Quality-focused)**
+       166 -  - Keep highest-scoring memories only
+       166 +  - Keep highest-scoring reasoning patterns only
+       167    - Selection: ε-greedy (90/10)
+       168    - Evolution: Slow (every 20 gens)
+       169 -  - Hypothesis: Elite inheritance works best
+       169 +  - Hypothesis: Elite cognitive strategies work best
+       170    
+       171    **Strategy B: Diversity-Based (Coverage-focused)**
+       172 -  - Cluster memories, keep representatives
+       172 +  - Cluster reasoning patterns, keep representatives
+       173    - Selection: Tournament (top 3)
+       174    - Evolution: Fast (every 5 gens)
+       175 -  - Hypothesis: Coverage beats optimization
+       175 +  - Hypothesis: Diverse cognitive approaches beat optimization
+       176    
+       177    **Strategy C: Usage-Based (Practical-focused)**
+       178 -  - Keep most-retrieved memories (retrieval_count × score)
+       178 +  - Keep most-retrieved reasoning patterns (retrieval_count × score)
+       179    - Selection: Fitness-proportional
+       180    - Evolution: Adaptive
+       181 -  - Hypothesis: Field-tested knowledge wins
+       181 +  - Hypothesis: Field-tested cognitive strategies win
+       182    
+       183    ---
+       184    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 16 additions and 10 removals                                                       
+       184    
+       185    ## Why This Design
+       186    
+       187 -  ### Problem: Prompts Are Bad at Encoding Nuance
+       187 +  ### Problem: Prompts Are Bad at Encoding How to Think
+       188    
+       189    Traditional approach:
+       190    ```python
+     ...
+       193    Use hooks. Be engaging. Start with questions.
+       194    Make it compelling. Use statistics when relevant.
+       195    Consider the reader's attention span...
+       196 -  [hundreds of lines of instructions]"""
+       196 +  [hundreds of lines of cognitive instructions]"""
+       197    ```
+       198    
+       199 -  Our approach:
+       199 +  Our approach (Three-Layer Separation):
+       200    ```python
+       201 -  # Stable prompt (simple, consistent)
+       201 +  # Layer 1: Stable prompt (simple interface)
+       202    prompt = "You are an intro writer."
+       203    
+       204 -  # Knowledge in memories (specific, tested, valuable)
+       205 -  memories = [
+       206 -      "Questions increased engagement by 31% on technical topics",
+       207 -      "Statistics work best in second sentence, not first",
+       208 -      "Personal anecdotes outperformed questions for emotional topics"
+       204 +  # Layer 2: Shared RAG (domain knowledge available to all)
+       205 +  shared_knowledge = ["WWII facts", "economic statistics", "historical context"]
+       206 +  
+       207 +  # Layer 3: Reasoning patterns (cognitive strategies, evolves through inheritance)
+       208 +  reasoning_patterns = [
+       209 +      {
+       210 +          "planning_steps": ["establish_context", "add_statistics", "pose_question"],
+       211 +          "execution_trace": "Used historical example → 3 stats → provocative question",
+       212 +          "score": 8.5
+       213 +      },
+       214 +      # More cognitive strategies...
+       215    ]
+       216    ```
+       217    
+       218 -  **Key Insight**: That's why we need RAG in the first place—prompts can't hold nuanced knowledge. So keep prompts stable 
+           - and evolve the knowledge base (memories) instead.
+       218 +  **Key Insight**: Models don't think in text—they think in embeddings. Vector databases excel at finding similar reasoning 
+           + structures. "Find planning sequences like mine" is exactly what embedding search was built for. So keep prompts stable, put
+           +  content in shared RAG, and evolve reasoning patterns through inheritance.
+       219    
+       220    ### Why Lamarckian > Darwinian for AI
+       221    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 29 additions and 16 removals                                                       
+       217    
+       218    **Key Insight**: Models don't think in text—they think in embeddings. Vector databases excel at finding similar reasoning 
+             structures. "Find planning sequences like mine" is exactly what embedding search was built for. So keep prompts stable, put
+              content in shared RAG, and evolve reasoning patterns through inheritance.
+       219    
+       220 -  ### Why Lamarckian > Darwinian for AI
+       220 +  ### Why Lamarckian > Darwinian for AI Reasoning
+       221    
+       222    **Darwinian** (biological): Random mutations hope to find improvements
+       223 -  **Lamarckian** (AI): Acquired knowledge inherited directly
+       223 +  **Lamarckian** (AI systems): Acquired reasoning strategies inherited directly
+       224    
+       225 -  For AI agents, Lamarckian is superior:
+       226 -  - Direct knowledge transfer (no re-learning)
+       227 -  - Faster convergence (start with inherited wisdom)
+       228 -  - Preserves hard-won insights
+       229 -  - Natural selection still applies (bad knowledge → poor performance → no reproduction)
+       225 +  For AI agents, Lamarckian is superior because:
+       226 +  - Direct cognitive transfer (no need to rediscover reasoning patterns)
+       227 +  - Faster convergence (start with proven thinking strategies)
+       228 +  - Preserves successful cognitive approaches
+       229 +  - Natural selection still applies (bad reasoning → poor performance → no reproduction)
+       230    
+       231    Example progression:
+       232 +  ```python
+       233 +  # Generation 1 discovers through experience:
+       234 +  personal_reasoning = {
+       235 +      "pattern": ["establish_context", "add_statistics", "pose_question"],
+       236 +      "score": 7.8
+       237 +  }
+       238 +  
+       239 +  # Generation 2 inherits this as prior reasoning:
+       240 +  inherited_reasoning = {
+       241 +      "pattern": ["establish_context", "add_statistics", "pose_question"],
+       242 +      "score": 7.8,
+       243 +      "generation": 1
+       244 +  }
+       245 +  
+       246 +  # Generation 2 refines it:
+       247 +  personal_reasoning = {
+       248 +      "pattern": ["establish_context", "add_statistics", "contrast_viewpoint", "pose_question"],
+       249 +      "score": 8.6
+       250 +  }
+       251 +  
+       252 +  # Generation 3 inherits the refined pattern
+       253    ```
+       254 -  Gen 1: "Questions increased engagement by 31%"
+       255 -         ↓ (learns through experience)
+       256 -  Gen 2: Inherits Gen 1's insight +
+       257 -         "Questions + statistics = 43% engagement"
+       258 -         ↓ (builds on inherited knowledge)
+       259 -  Gen 3: Inherits both insights +
+       260 -         "Questions + statistics + personal anecdote = 58% engagement"
+       261 -  ```
+       254    
+       255 -  Knowledge accumulates. Each generation starts ahead.
+       255 +  Cognitive strategies accumulate. Each generation reasons better.
+       256    
+       257    ---
+       258    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 23 additions and 9 removals                       
+       258    
+       259    ## Implementation Status
+       260    
+       261 +  ### ⚠️ ARCHITECTURE CHANGE IMPACT
+       262 +  
+       263 +  **The shift from content-based memories to reasoning patterns affects most branches.**
+       264 +  
+       265 +  Key changes needed:
+       266 +  1. Separate ChromaDB collections: agent reasoning patterns + shared RAG
+       267 +  2. Store planning steps/execution traces, NOT content
+       268 +  3. Context distribution shares reasoning traces, not outputs
+       269 +  4. Retrieval queries reasoning patterns by structural similarity
+       270 +  
+       271    ### Completed (Merged to Master)
+       272    
+       273 -  ✅ **M1.1: agent-pool-infrastructure**
+       273 +  ✅ **M1.1: agent-pool-infrastructure** - **STILL VALID**
+       274    - `AgentPool` class managing 5 agents per role
+       275    - Selection strategies: ε-greedy, fitness-weighted, tournament, best
+       276    - Helper methods: `get_top_n()`, `get_random_lower_half()`
+       277 +  - **No changes needed**: Population management is independent of what's stored
+       278    
+       279 -  ✅ **M1.2: individual-memory-collections**
+       280 -  - Store ALL experiences (no score threshold)
+       281 -  - Weighted retrieval: `similarity × (score/10)`
+       282 -  - Inherited memory support
+       283 -  - Per-agent ChromaDB collections
+       279 +  ⚠️ **M1.2: individual-memory-collections** - **NEEDS REVISION**
+       280 +  - Currently stores content/experiences
+       281 +  - **Must change to**: Store reasoning patterns (planning steps + execution traces)
+       282 +  - **Must add**: Separate shared RAG for domain knowledge
+       283 +  - Weighted retrieval concept is still valid
+       284 +  - Per-agent ChromaDB collections structure is correct
+       285 +  - **Action**: Refactor to `ReasoningMemory` class
+       286    
+       287 -  ✅ **M1.6: tavily-web-search**
+       287 +  ✅ **M1.6: tavily-web-search** - **STILL VALID**
+       288    - Tavily API integration for external knowledge
+       289 -  - Dynamic topic generation
+       290 -  - Search result incorporation
+       289 +  - **Purpose unchanged**: Provides domain facts for shared RAG
+       290 +  - Dynamic topic generation works as-is
+       291 +  - **No changes needed**: External knowledge gathering is orthogonal to reasoning patterns
+       292    
+       293    ### Current Work (In Progress)
+       294    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 22 additions and 14 removals                          
+       294    
+       295    **Active worktrees** (branches in development):
+       296    
+       297 -  ⏳ **M1.3: fitness-tracking** (worktree exists)
+       298 -  - Overall fitness tracking
+       297 +  ✅ **M1.3: fitness-tracking** - **STILL VALID** (worktree exists)
+       298 +  - Overall fitness tracking based on output quality
+       299    - Domain-specific performance (ML, Python, Web, General)
+       300    - Specialization detection
+       301    - Pool-level helpers
+       302 +  - **No changes needed**: Fitness is measured by output quality, independent of what's stored
+       303    - **Worktree**: `worktrees/fitness-tracking`
+       304    - **AGENT_TASK.md**: `docs/feature-plans/fitness-tracking/AGENT_TASK.md`
+       305    
+       306 -  ⏳ **M1.4: context-distribution** (worktree exists)
+       306 +  ⚠️ **M1.4: context-distribution** - **NEEDS REVISION** (worktree exists)
+       307    - `ContextManager` with 40/30/20/10 weighted distribution
+       308 -  - Cross-role context flow
+       309 -  - Forced diversity requirement
+       310 -  - Depends on M1.1
+       308 +  - **Must change**: Distribute reasoning traces, NOT content/outputs
+       309 +  - **From README**: "Receive context: Get reasoning traces from other agents"
+       310 +  - Forced diversity requirement still valid
+       311 +  - **Action**: Update to share cognitive strategies, not generated content
+       312    - **Worktree**: `worktrees/context-distribution`
+       313    - **AGENT_TASK.md**: `docs/feature-plans/context-distribution/AGENT_TASK.md`
+       314    
+       315 -  ⏳ **M1.5: pipeline-integration** (worktree exists)
+       316 -  - `EvolutionaryWorkflow` integrating all M1 components
+       317 -  - LangGraph pipeline: intro → body → conclusion → assemble
+       318 -  - `LLMEvaluator` for scoring
+       319 -  - Main runner for multi-generation experiments
+       320 -  - Depends on M1.1-M1.4
+       315 +  ⚠️ **M1.5: pipeline-integration** - **NEEDS MAJOR REVISION** (worktree exists)
+       316 +  - `EvolutionaryWorkflow` needs to implement new 8-step cycle
+       317 +  - **Must change**:
+       318 +    1. Add "Plan Approach" step (query reasoning patterns)
+       319 +    2. Separate "Retrieve Knowledge" (shared RAG) from reasoning patterns
+       320 +    3. Store reasoning patterns + traces, NOT content
+       321 +  - LangGraph pipeline structure stays same: intro → body → conclusion → assemble
+       322 +  - `LLMEvaluator` for scoring still valid (scores output quality)
+       323 +  - **Action**: Major refactor to align with three-layer architecture
+       324    - **Worktree**: `worktrees/pipeline-integration`
+       325    - **AGENT_TASK.md**: `docs/feature-plans/pipeline-integration/AGENT_TASK.md`
+       326    
+       327    **Other active worktrees**:
+       328    
+       329 -  🔧 **core-concept-refactor** (exploratory)
+       329 +  ❓ **core-concept-refactor** - **REVIEW NEEDED** (exploratory)
+       330    - Worktree: `worktrees/core-concept-refactor`
+       331    - Design documents for credibility and evolutionary multi-agent system
+       332 +  - **May be superseded by** this README refinement
+       333 +  - **Action**: Review to see if still relevant
+       334    
+       335 -  🔧 **visualization-v2** (enhancement)
+       335 +  ✅ **visualization-v2** - **STILL VALID** (enhancement)
+       336    - Worktree: `worktrees/visualization-v2`
+       337    - Improved visualization system
+       338 +  - **No changes needed**: Visualization is output-focused, independent of storage architecture
+       339    
+       340    ### Next Steps (Milestones 2-5)
+       341    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 8 additions and 8 removals                 
+       339    
+       340    ### Next Steps (Milestones 2-5)
+       341    
+       342 -  **Milestone 2: Memory Inheritance (Evolution)**
+       343 -  - M2.1: Memory compaction strategies
+       344 -  - M2.2: Reproduction with memory inheritance
+       345 -  - M2.3: Population management (add/remove agents)
+       342 +  **Milestone 2: Reasoning Pattern Inheritance (Evolution)**
+       343 +  - M2.1: Reasoning pattern compaction strategies
+       344 +  - M2.2: Reproduction with cognitive strategy inheritance
+       345 +  - M2.3: Population management (add/remove agents based on reasoning effectiveness)
+       346    - M2.4: Evolution pipeline integration
+       347    
+       348    **Milestone 3: Strategies**
+       349    - M3.1: Strategy abstraction layer
+       350 -  - M3.2: Three baseline strategies (A/B/C)
+       350 +  - M3.2: Three baseline strategies (A/B/C for reasoning pattern compaction)
+       351    - M3.3: Parallel execution framework
+       352    
+       353    **Milestone 4: Experimentation**
+       354    - M4.1: 100-generation experiment runner
+       355    - M4.2: Statistical analysis (t-tests, ANOVA, regression)
+       356 -  - M4.3: Lineage tracking and visualization
+       356 +  - M4.3: Cognitive lineage tracking and visualization
+       357    
+       358    **Milestone 5: Enhancement**
+       359    - M5.1: Streamlit dashboard
+       360 -  - M5.2: Search integration (already merged, may enhance)
+       361 -  - M5.3: Meta-evolution (evolve compaction strategies)
+       360 +  - M5.2: Shared RAG integration (domain knowledge layer)
+       361 +  - M5.3: Meta-evolution (evolve reasoning pattern compaction strategies)
+       362    
+       363    ---
+       364    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 15 additions and 15 removals                                  
+       366    
+       367    ### Primary Outcomes
+       368    
+       369 -  1. **Fitness Improvement**: Average scores increase >0.5 points
+       370 -  2. **Emergent Specialization**: Domain-specific variance >1.0
+       371 -  3. **Sustained Diversity**: Population std dev >0.5
+       372 -  4. **Memory Effectiveness**: Retrieval count correlates with performance
+       373 -  5. **Strategy Winner**: One configuration significantly outperforms others (p < 0.05)
+       369 +  1. **Reasoning Improvement**: Average scores increase >0.5 points through better cognitive strategies
+       370 +  2. **Emergent Specialization**: Roles develop distinct reasoning patterns
+       371 +  3. **Sustained Diversity**: Multiple problem-solving approaches coexist (std dev >0.5)
+       372 +  4. **Pattern Effectiveness**: Retrieved reasoning patterns correlate with performance
+       373 +  5. **Strategy Winner**: One compaction approach demonstrably outperforms others (p < 0.05)
+       374    
+       375    ### Observable Phenomena
+       376    
+       377 -  - Knowledge lineages propagate across generations
+       378 -  - Memory accumulation (inherited + personal = 100-250 per agent)
+       379 -  - Compaction quality improves over time
+       380 -  - Cross-pollination from 20% diversity injection
+       381 -  - Role-specific specialization (intro agents ≠ body agents)
+       377 +  - **Reasoning lineages**: Successful cognitive patterns propagate across generations
+       378 +  - **Pattern refinement**: Later generations have more sophisticated reasoning
+       379 +  - **Cognitive accumulation**: 50-100 inherited + 50-150 personal patterns per agent
+       380 +  - **Cross-pollination**: Diverse reasoning from 20% low-performer context injection
+       381 +  - **Role specialization**: Intro agents reason differently than Body agents
+       382    
+       383    ### Failure Modes (What to Watch For)
+       384    
+       385 -  ❌ **All strategies converge**: Compaction approach doesn't matter
+       386 -  ❌ **No generational improvement**: Later gens perform same as Gen 1
+       387 -  ❌ **Memory bloat**: Inherited memories add noise instead of signal
+       388 -  ❌ **Diversity collapse**: All agents become identical
+       389 -  ❌ **No specialization**: Agents don't develop distinct knowledge
+       385 +  ❌ **No reasoning improvement**: Cognitive patterns don't evolve
+       386 +  ❌ **Pattern convergence**: All agents think the same way
+       387 +  ❌ **Noise accumulation**: Inherited patterns add confusion instead of clarity
+       388 +  ❌ **Diversity collapse**: Selection pressure eliminates alternative reasoning
+       389 +  ❌ **No specialization**: Roles don't develop distinct cognitive strategies
+       390    
+       391    **Note**: Any failure mode provides valuable negative results. Adjust and retry.
+       392    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 12 additions and 5 removals                       
+       397    ### Key Parameters
+       398    
+       399    ```bash
+       400 -  # Memory
+       401 -  MEMORY_SCORE_THRESHOLD=7.0      # DEPRECATED in M1: store ALL experiences
+       402 -  INHERITED_MEMORY_SIZE=100       # Max memories from parents
+       400 +  # Reasoning Patterns (Layer 3: Evolving)
+       401 +  INHERITED_REASONING_SIZE=100    # Max reasoning patterns inherited from parents
+       402 +  PERSONAL_REASONING_SIZE=150     # Max personal reasoning patterns stored
+       403    
+       404 +  # Shared Knowledge (Layer 2: Fixed)
+       405 +  USE_SHARED_RAG=true             # Separate domain knowledge layer
+       406 +  REASONING_SEARCH_ONLY=true      # Don't mix content with reasoning patterns
+       407 +  
+       408 +  # Prompts (Layer 1: Fixed)
+       409 +  PROMPTS_IMMUTABLE=true          # Never modify prompts during evolution
+       410 +  
+       411    # Population
+       412    MIN_POPULATION=3                # Per role
+       413    MAX_POPULATION=8                # Per role
+     ...
+       410    EVOLUTION_FREQUENCY=10          # Generations between cycles
+       411    REMOVAL_FITNESS_THRESHOLD=6.0   # Remove if below (after 20+ tasks)
+       412    
+       413 -  # Context Distribution
+       414 -  CONTEXT_WEIGHTS=40,30,20,10     # Hierarchy/High/Low/Peer
+       413 +  # Reasoning Context Distribution
+       414 +  CONTEXT_WEIGHTS=40,30,20,10     # Hierarchy/High/Low/Peer (reasoning traces, not content)
+       415    
+       416    # Strategy-specific (varies by strategy)
+       417    SELECTION_METHOD=epsilon_greedy|tournament|fitness_weighted
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 5 additions and 3 removals                  
+       452    
+       453    - **LangGraph**: Workflow orchestration
+       454    - **Anthropic Claude**: LLM for generation and evaluation
+       455 -  - **ChromaDB**: Vector database (15 isolated collections)
+       456 -  - **sentence-transformers**: Embeddings for semantic similarity
+       457 -  - **Tavily**: Web search integration
+       455 +  - **ChromaDB**: Vector database
+       456 +    - 15 isolated collections for reasoning patterns (per-agent cognitive strategies)
+       457 +    - 1 shared collection for domain knowledge (shared RAG)
+       458 +  - **sentence-transformers**: Embeddings for reasoning pattern similarity
+       459 +  - **Tavily**: Web search for external knowledge (feeds shared RAG)
+       460    - **Streamlit**: Dashboard (M5)
+       461    
+       462    ---
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 34 additions and 8 removals               
+       492    
+       493    ## Immediate Next Actions
+       494    
+       495 -  ### Priority 1: Complete M1 (3 branches in progress)
+       495 +  ### Priority 0: Architecture Alignment (CRITICAL)
+       496    
+       497 -  1. **Complete M1.3** (fitness-tracking) - worktree active
+       497 +  0. **Refactor M1.2** (individual-memory-collections) - **MUST DO FIRST**
+       498       ```bash
+       499 +     # This branch is merged but needs refactoring
+       500 +     ```
+       501 +     - Rename `MemoryManager` → `ReasoningMemory`
+       502 +     - Store reasoning patterns (planning steps + execution traces), NOT content
+       503 +     - Create separate `SharedRAG` class for domain knowledge
+       504 +     - Update storage schema to match README examples
+       505 +     - Add `planning_steps` and `execution_trace` fields
+       506 +     - **This is foundational**: Other branches depend on this
+       507 +  
+       508 +  ### Priority 1: Update M1 Branches for Reasoning Patterns
+       509 +  
+       510 +  1. **Complete M1.3** (fitness-tracking) - ✅ No changes needed
+       511 +     ```bash
+       512       cd worktrees/fitness-tracking
+       513       cat ../../docs/feature-plans/fitness-tracking/AGENT_TASK.md
+       514       ```
+     ...
+       504       - Write comprehensive tests
+       505       - Merge to master when complete
+       506    
+       507 -  2. **Complete M1.4** (context-distribution) - worktree active
+       507 +  2. **Revise M1.4** (context-distribution) - ⚠️ Update AGENT_TASK.md first
+       508       ```bash
+       509       cd worktrees/context-distribution
+       510       cat ../../docs/feature-plans/context-distribution/AGENT_TASK.md
+       511       ```
+       512 +     - **BEFORE implementing**: Update AGENT_TASK.md to share reasoning traces
+       513       - Implement `ContextManager` with 40/30/20/10 distribution
+       514 +     - Distribute reasoning traces (planning steps + execution traces), NOT outputs
+       515       - Add broadcast tracking
+       516       - Write comprehensive tests
+       517       - Merge to master when complete
+       518    
+       519 -  3. **Complete M1.5** (pipeline-integration) - worktree active
+       519 +  3. **Revise M1.5** (pipeline-integration) - ⚠️ Major refactor needed
+       520       ```bash
+       521       cd worktrees/pipeline-integration
+       522       cat ../../docs/feature-plans/pipeline-integration/AGENT_TASK.md
+       523       ```
+       524 -     - Integrate all M1 components into workflow
+       524 +     - **BEFORE implementing**: Update AGENT_TASK.md to reflect 8-step cycle
+       525 +     - Implement new workflow:
+       526 +       1. Start with inheritance
+       527 +       2. Plan approach (query reasoning patterns)
+       528 +       3. Retrieve knowledge (shared RAG)
+       529 +       4. Receive context (reasoning traces)
+       530 +       5. Generate
+       531 +       6. Evaluate
+       532 +       7. Store reasoning pattern
+       533 +       8. Evolve
+       534 +     - Integrate ReasoningMemory + SharedRAG
+       535       - Implement LLMEvaluator
+       536       - Create main runner
+       537       - Write integration tests
+     ...
+       531       - Can run 20 generations successfully
+       532       - All tests passing (>90% coverage)
+       533       - Population statistics working
+       534 -     - Context distribution verified (40/30/20/10)
+       535 -     - Memory retrieval working (inherited + personal)
+       534 +     - Reasoning context distribution verified (40/30/20/10)
+       535 +     - Reasoning pattern retrieval working (inherited + personal)
+       536 +     - Shared RAG working (domain knowledge separation)
+       537    
+       538    ### Priority 3: Begin M2
+       539    
+       540 -  5. **Proceed to M2** (memory inheritance)
+       540 +  5. **Proceed to M2** (reasoning pattern inheritance)
+       541       - Create M2.1 and M2.2 worktrees
+       542       - Start with M2.1 and M2.2 in parallel
+       543       - Then M2.3, M2.4 sequentially
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 18 additions and 6 removals                                            
+       601    
+       602    ## Key Takeaways
+       603    
+       604 -  1. **Architecture**: Lamarckian evolution = stable prompts + inherited memories + natural selection
+       604 +  1. **Architecture**: Three-layer separation
+       605 +     - Layer 1 (Prompts): WHAT to do - frozen
+       606 +     - Layer 2 (Shared RAG): WHAT to know - shared by all
+       607 +     - Layer 3 (Reasoning): HOW to think - evolves through inheritance
+       608    
+       609 -  2. **Status**: M1 is 3/5 complete (M1.1, M1.2, M1.6 merged; need M1.3, M1.4, M1.5)
+       609 +  2. **Critical Insight**: We're evolving cognitive strategies (reasoning patterns), not content
+       610 +     - Content goes to shared RAG
+       611 +     - Reasoning patterns (planning steps + execution traces) get inherited
+       612 +     - Models think in embeddings, not text
+       613    
+       614 -  3. **Next**: Complete M1, then proceed to M2 (memory inheritance/evolution)
+       614 +  3. **Status**: M1 needs architecture alignment
+       615 +     - M1.1 (agent-pool): ✅ Valid
+       616 +     - M1.2 (memory): ⚠️ Needs refactor to ReasoningMemory + SharedRAG
+       617 +     - M1.3 (fitness): ✅ Valid
+       618 +     - M1.4 (context): ⚠️ Needs revision (share reasoning traces, not content)
+       619 +     - M1.5 (pipeline): ⚠️ Major revision (8-step cycle with reasoning patterns)
+       620 +     - M1.6 (search): ✅ Valid
+       621    
+       622 -  4. **Research Question**: Does memory inheritance create demonstrable improvement over generations?
+       622 +  4. **Research Question**: Does reasoning pattern inheritance create demonstrable improvement over generations?
+       623    
+       624 -  5. **Testing 3 Strategies**: Score-weighted, diversity-based, usage-based compaction
+       624 +  5. **Testing 3 Strategies**: Score-weighted, diversity-based, usage-based compaction (of cognitive strategies)
+       625    
+       626 -  6. **Success**: Fitness improves >0.5 points, specialization emerges, diversity sustained
+       626 +  6. **Success**: Reasoning improves >0.5 points, cognitive specialization emerges, diversity sustained
+       627    
+       628    7. **This is Research**: May work, may not—both outcomes provide valuable empirical data
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 3 additions and 1 removal                                                          
+        2    
+        3    **Lamarck Evolutionary Agent Network**
+        4    
+        5 -  > Last updated: 2025-10-18
+        5 +  > Last updated: 2025-10-20 (MAJOR ARCHITECTURE REVISION)
+        6    >
+        7    > This document consolidates all brainstorming docs into a single reference for understanding the architecture and roadmap.
+        8    >
+        9 +  > **CRITICAL CHANGE**: Architecture now uses reasoning patterns (cognitive strategies), NOT content-based memories.
+       10 +  >
+       11    > **Note**: The project was previously named "HVAS Mini". References to that name in older worktree branches and historical
+             documents refer to this same project.
+       12    
+       13    ---
+
+● Now let me create a summary document analyzing the branch validity:
+
+● Write(docs/brainstorming/REFINEMENT.md)
+  ⎿  Wrote 267 lines to docs/brainstorming/REFINEMENT.md                   
+     # Architecture Refinement Analysis
+     **Date**: 2025-10-20
+     **Status**: Architecture refinement complete, branch validity assessed
+     ---
+     ## The Key Conceptual Shift
+     ### OLD (Fuzzy)
+     … +257 lines (ctrl+o to expand)
+
+● Perfect! I've updated the CONSOLIDATED_PLAN and created a detailed analysis. Here's what I found:
+
+  Key Conceptual Shift in README
+
+  The README refinement makes a critical distinction:
+
+  OLD (Fuzzy)
+
+  - Memories = content/outputs (paragraphs, text)
+  - Problem: Only applicable to similar topics
+  - Didn't make sense for diverse blog posts
+
+  NEW (Clear)
+
+  Three-layer architecture:
+  1. Fixed Prompts (Interface) - "You are an intro writer" - never changes
+  2. Shared RAG (Knowledge) - Domain facts, available to all agents
+  3. Evolving Reasoning (Cognition) - Planning strategies, inherited through generations
+
+  What gets stored NOW:
+  {
+      "planning_steps": ["establish_context", "add_statistics", "pose_question"],
+      "execution_trace": "Used WWII example → 3 stats → provocative question",
+      "score": 8.5
+  }
+  # NOT the actual paragraph content
+
+  Branch Validity Assessment
+
+  ✅ STILL VALID (No changes needed)
+
+  - M1.1: agent-pool-infrastructure - Population management is orthogonal
+  - M1.3: fitness-tracking - Tracks output quality, not storage architecture
+  - M1.6: tavily-web-search - Feeds shared RAG, purpose unchanged
+  - visualization-v2 - Output visualization, independent of storage
+
+  ⚠️ NEEDS REVISION
+
+  M1.2: individual-memory-collections (MERGED - needs refactor)
+  - Must rename MemoryManager → ReasoningMemory
+  - Store planning steps + execution traces, NOT content
+  - Create separate SharedRAG class for domain knowledge
+  - FOUNDATIONAL: Other branches depend on this
+
+  M1.4: context-distribution (needs update)
+  - Must distribute reasoning traces, NOT content/outputs
+  - Update AGENT_TASK.md before implementing
+  - 40/30/20/10 distribution concept stays the same
+
+  M1.5: pipeline-integration (major refactor)
+  - Must implement 8-step cycle (README has new flow)
+  - Add "Plan Approach" step (query reasoning patterns)
+  - Separate "Retrieve Knowledge" (shared RAG) from reasoning retrieval
+  - Store reasoning patterns, NOT content
+
+  core-concept-refactor (review needed)
+  - May be superseded by this README refinement
+
+  Documents Updated
+
+  1. CONSOLIDATED_PLAN.md: Complete rewrite to reflect reasoning-pattern architecture
+  2. REFINEMENT.md: New analysis document with branch validity assessment
+
+  Recommended Next Steps
+
+  Priority 0 (CRITICAL): Refactor M1.2 first
+  - Everything depends on ReasoningMemory + SharedRAG
+  - Update storage schema for reasoning patterns
+
+  Priority 1: Update M1 branches
+  1. M1.3 - proceed as planned ✅
+  2. M1.4 - update AGENT_TASK.md, then implement ⚠️
+  3. M1.5 - major refactor needed ⚠️
+
+  The architecture is now much clearer: we're evolving cognitive strategies (how to think), not content (what to know).
+
+> also keep this in mind 2. Implementation—how you’d actually get “thinking.”
+A modern API call (say, OpenAI, Anthropic, or local LLM) doesn’t give you the internal reasoning trace of the model. It only gives you the 
+final text output. You can, however, induce the model to externalize its reasoning by asking it to think out loud. That’s the basic trick 
+behind reflection, chain-of-thought prompting, and “self-critique” loops.
+
+A minimal architecture looks like this:
+
+Step 1. Capture the reasoning trace.
+You call the API with something like:
+
+SYSTEM: You are a reasoning agent. When answering, include your reasoning under <think> tags and your final answer under <final> tags.
+USER: How should we tune the retrieval threshold for noisy feedback?
+
+
+The model might respond:
+
+<think>
+The task requires balancing recall and precision... a lower threshold risks pulling irrelevant cards...
+</think>
+<final>
+Set the retrieval threshold dynamically based on rubric variance.
+</final>
+
+
+Everything inside <think> is your ephemeral reasoning trace.
+
+Step 2. Extract and store that reasoning.
+You parse the output, keep the <think> section, and bundle it with metadata:
+
+{
+  "situation": "tuning retrieval threshold under noisy feedback",
+  "tactic": "dynamic thresholding by rubric variance",
+  "reasoning": "The task requires balancing recall and precision...",
+  "score": 0.87,
+  "provenance": {"agent_id": "writer_01", "timestamp": "..."},
+  "embedding": [ ... ]
+}
+
+
+That record—call it a reasoning unit—is what you index in a vector database.
+
+Step 3. Retrieval.
+Next time a similar situation arises, you embed the new context and search for semantically close reasoning units. You then compose the top
+ k snippets back into the context for the next generation of the agent. This is exactly how retrieval-augmented generation works, but 
+instead of external facts, you’re retrieving fragments of reasoning.
+
+Step 4. Scoring and compaction.
+After each task, you score the outcome (rubric, evaluator agent, or human) and update that unit’s score. Periodically you prune low 
+performers, merge similar ones, or abstract a new one—hence the evolutionary feel. follow recommened steps 
+
+● Excellent point! This is the practical implementation of the reasoning pattern concept. Let me update the CONSOLIDATED_PLAN to add this
+  critical implementation detail:
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 172 additions and 15 removals                                                 
+       128       ↓ Get reasoning traces from other agents
+       129       ↓ (how they approached their tasks, not what they produced)
+       130    
+       131 -  5. GENERATE
+       131 +  5. GENERATE (with reasoning externalization)
+       132       ↓ Fixed prompt + evolved reasoning patterns + domain knowledge + reasoning context
+       133 +     ↓ LLM responds with <think> tags (reasoning) + <final> tags (output)
+       134    
+       135    6. EVALUATE (LLM scoring)
+       136       ↓ Quality of output (engagement, clarity, depth, informativeness)
+       137    
+       138    7. STORE REASONING PATTERN
+       139 -     ↓ Store planning steps + execution trace + score
+       139 +     ↓ Extract <think> section, store with metadata + score
+       140       ↓ (NOT the content - that goes to shared RAG if needed)
+       141    
+       142    8. EVOLVE (every 10 generations)
+     ...
+       145       └─ POPULATION MGMT: Add/remove agents based on reasoning effectiveness
+       146    ```
+       147    
+       148 -  **Example of what gets stored in step 7:**
+       148 +  ---
+       149 +  
+       150 +  ## Implementation: Capturing Reasoning Patterns
+       151 +  
+       152 +  **Key Challenge**: LLM APIs don't expose internal reasoning—only final outputs.
+       153 +  
+       154 +  **Solution**: Induce the model to externalize reasoning via structured prompts.
+       155 +  
+       156 +  ### Step 1: Capture the Reasoning Trace
+       157 +  
+       158 +  **Prompt structure:**
+       159    ```python
+       160 -  {
+       161 -      "planning_steps": [
+       162 -          "First establish context with historical example",
+       163 -          "Then introduce 3-5 supporting statistics",
+       164 -          "Finally pose thought-provoking question"
+       165 -      ],
+       166 -      "execution_trace": "Used WWII example, included 3 economic stats, asked 'What if?'",
+       167 -      "context_type": "technical_audience",
+       168 -      "score": 8.5,
+       169 -      "retrieval_count": 12,
+       170 -      "generation": 5
+       160 +  SYSTEM: You are an intro writer. When generating content, include your
+       161 +  reasoning under <think> tags and your final output under <final> tags.
+       162 +  
+       163 +  USER: Write an introduction for "The Evolution of Understanding"
+       164 +  
+       165 +  CONTEXT (retrieved reasoning patterns):
+       166 +  - "Start with historical example to ground reader"
+       167 +  - "Use statistics in second sentence for credibility"
+       168 +  - "End with provocative question to drive engagement"
+       169 +  
+       170 +  CONTEXT (shared RAG knowledge):
+       171 +  - WWII computing history
+       172 +  - Turing's work on machine intelligence
+       173 +  - Modern interpretability research
+       174 +  ```
+       175 +  
+       176 +  **LLM Response:**
+       177 +  ```xml
+       178 +  <think>
+       179 +  The task is writing an introduction about AI understanding evolution.
+       180 +  Based on past patterns, I should:
+       181 +  1. Start with a historical anchor (Turing seems perfect given the topic)
+       182 +  2. Add a statistic about modern AI interpretability research
+       183 +  3. Build tension by contrasting past and present
+       184 +  4. End with a question about future implications
+       185 +  
+       186 +  I'll use Turing's imitation game as the hook, cite recent interpretability
+       187 +  progress statistics, then pose a question about whether machines can truly
+       188 +  understand themselves.
+       189 +  </think>
+       190 +  
+       191 +  <final>
+       192 +  In 1950, Alan Turing proposed a test: if a machine could fool humans into
+       193 +  thinking it was conscious, did the distinction matter? Seventy-five years
+       194 +  later, as neural networks process billions of parameters, a new question
+       195 +  emerges—not whether machines can think, but whether they can explain how
+       196 +  they think. Can AI learn to interpret itself?
+       197 +  </final>
+       198 +  ```
+       199 +  
+       200 +  ### Step 2: Extract and Store the Reasoning
+       201 +  
+       202 +  **Parse and structure:**
+       203 +  ```python
+       204 +  reasoning_unit = {
+       205 +      # Extracted from <think> tags
+       206 +      "situation": "writing intro for AI evolution topic",
+       207 +      "tactic": "historical anchor → statistic → tension → question",
+       208 +      "reasoning": "The task is writing an introduction... (full <think> content)",
+       209 +  
+       210 +      # Metadata
+       211 +      "score": 0.87,  # From evaluator
+       212 +      "provenance": {
+       213 +          "agent_id": "intro_agent_2",
+       214 +          "generation": 5,
+       215 +          "timestamp": "2025-10-20T..."
+       216 +      },
+       217 +  
+       218 +      # For retrieval
+       219 +      "embedding": [...],  # Vector embedding of the reasoning
+       220 +      "retrieval_count": 0,  # How many times this pattern was retrieved
+       221 +  
+       222 +      # NOT stored
+       223 +      # "output": "In 1950, Alan Turing..."  <- Goes to shared RAG if needed
+       224    }
+       225 -  # NOT stored: the actual paragraph content
+       225    ```
+       226    
+       227 +  ### Step 3: Retrieval by Reasoning Similarity
+       228 +  
+       229 +  **Next generation, same agent:**
+       230 +  ```python
+       231 +  # New task: "Write intro for quantum computing and consciousness"
+       232 +  new_task_embedding = embed("intro for quantum computing consciousness")
+       233 +  
+       234 +  # Search by reasoning pattern similarity (NOT content)
+       235 +  similar_reasoning = vector_db.search(
+       236 +      query_embedding=new_task_embedding,
+       237 +      filter={"score": {">": 7.0}},  # Only high-performing reasoning
+       238 +      search_field="reasoning",  # Search the <think> content, not output
+       239 +      top_k=5
+       240 +  )
+       241 +  
+       242 +  # Returns:
+       243 +  # - "historical anchor → statistic → tension → question" (score: 8.7)
+       244 +  # - "provocative opening → credibility → intrigue" (score: 8.2)
+       245 +  # - ...
+       246 +  ```
+       247 +  
+       248 +  ### Step 4: Scoring and Compaction
+       249 +  
+       250 +  **After evaluation:**
+       251 +  ```python
+       252 +  # Update reasoning unit with score
+       253 +  reasoning_unit["score"] = evaluator.score(output)  # 8.5
+       254 +  reasoning_unit["retrieval_count"] += 1  # Track usage
+       255 +  
+       256 +  # Periodically (every 10 generations):
+       257 +  # 1. Prune low performers (score < 6.0 after 20+ retrievals)
+       258 +  # 2. Merge similar reasoning patterns (cluster by embedding distance)
+       259 +  # 3. Abstract new patterns from successful combinations
+       260 +  # 4. Pass compacted reasoning to offspring
+       261 +  ```
+       262 +  
+       263 +  ---
+       264 +  
+       265 +  ## How This Differs from Traditional RAG
+       266 +  
+       267 +  **Traditional RAG:**
+       268 +  - Stores: External facts, documents, knowledge
+       269 +  - Retrieves: "What information is relevant?"
+       270 +  - Example: Wikipedia articles, product docs
+       271 +  
+       272 +  **Reasoning Pattern Retrieval:**
+       273 +  - Stores: Cognitive strategies, problem-solving approaches
+       274 +  - Retrieves: "How did I solve similar problems?"
+       275 +  - Example: "Use historical anchor → add statistic → pose question"
+       276 +  
+       277 +  **Shared RAG (Layer 2):**
+       278 +  - Stores: Domain knowledge available to ALL agents
+       279 +  - Retrieves: "What facts do I need?"
+       280 +  - Example: Turing's work, interpretability statistics
+       281 +  
+       282 +  **Key Insight**: We're retrieving fragments of **reasoning** (HOW to think), not fragments of **knowledge** (WHAT to 
+           + know). Models think in embeddings—vector search excels at finding similar cognitive structures.
+       283 +  
+       284 +  ---
+       285 +  
+       286 +  ## Example Storage Schema
+       287 +  
+       288 +  ```python
+       289 +  # Per-agent reasoning collection (Layer 3: Evolving)
+       290 +  intro_agent_2_reasoning = [
+       291 +      {
+       292 +          "id": "reasoning_unit_001",
+       293 +          "situation": "technical intro requiring credibility",
+       294 +          "tactic": "historical_anchor → statistic → question",
+       295 +          "reasoning": "<full think content>",
+       296 +          "score": 8.7,
+       297 +          "retrieval_count": 12,
+       298 +          "generation": 5,
+       299 +          "inherited_from": ["parent1_reasoning_087", "parent2_reasoning_134"]
+       300 +      },
+       301 +      # ... 100-250 reasoning units per agent
+       302 +  ]
+       303 +  
+       304 +  # Shared knowledge collection (Layer 2: Fixed)
+       305 +  shared_rag = [
+       306 +      {
+       307 +          "id": "fact_001",
+       308 +          "content": "Alan Turing proposed the imitation game in 1950...",
+       309 +          "topic": "AI history",
+       310 +          "source": "Tavily search"
+       311 +      },
+       312 +      # ... domain facts available to all agents
+       313 +  ]
+       314 +  
+       315 +  # Fixed prompts (Layer 1: Frozen)
+       316 +  prompts = {
+       317 +      "intro": "You are an intro writer. Include reasoning under <think> tags."
+       318 +  }
+       319 +  ```
+       320 +  
+       321    ### Reasoning Pattern Compaction Strategies (Testing 3 in Parallel)
+       322    
+       323    **Strategy A: Score-Weighted (Quality-focused)**
+
+● Update(docs/brainstorming/REFINEMENT.md)
+  ⎿  Updated docs/brainstorming/REFINEMENT.md with 40 additions and 11 removals                      
+       21    
+       22    ### Example of What Gets Stored NOW
+       23    
+       24 +  **LLM Response with Externalized Reasoning:**
+       25 +  ```xml
+       26 +  <think>
+       27 +  The task is writing an introduction about AI understanding evolution.
+       28 +  Based on past patterns, I should:
+       29 +  1. Start with a historical anchor (Turing seems perfect given the topic)
+       30 +  2. Add a statistic about modern AI interpretability research
+       31 +  3. Build tension by contrasting past and present
+       32 +  4. End with a question about future implications
+       33 +  
+       34 +  I'll use Turing's imitation game as the hook, cite recent interpretability
+       35 +  progress statistics, then pose a question about whether machines can truly
+       36 +  understand themselves.
+       37 +  </think>
+       38 +  
+       39 +  <final>
+       40 +  In 1950, Alan Turing proposed a test: if a machine could fool humans into
+       41 +  thinking it was conscious, did the distinction matter? Seventy-five years
+       42 +  later, as neural networks process billions of parameters, a new question
+       43 +  emerges—not whether machines can think, but whether they can explain how
+       44 +  they think. Can AI learn to interpret itself?
+       45 +  </final>
+       46 +  ```
+       47 +  
+       48 +  **What gets STORED (in per-agent reasoning collection):**
+       49    ```python
+       50 -  # STORED (in per-agent reasoning collection):
+       50    {
+       51 -      "planning_steps": [
+       52 -          "First establish context with historical example",
+       53 -          "Then introduce 3-5 supporting statistics",
+       54 -          "Finally pose thought-provoking question"
+       55 -      ],
+       56 -      "execution_trace": "Used WWII example, included 3 economic stats, asked 'What if?'",
+       57 -      "context_type": "technical_audience",
+       51 +      # Extracted from <think> tags
+       52 +      "situation": "writing intro for AI evolution topic",
+       53 +      "tactic": "historical anchor → statistic → tension → question",
+       54 +      "reasoning": "<full <think> content>",
+       55 +  
+       56 +      # Metadata
+       57        "score": 8.5,
+       58        "retrieval_count": 12,
+       59 -      "generation": 5
+       59 +      "generation": 5,
+       60 +      "provenance": {"agent_id": "intro_agent_2", "timestamp": "..."},
+       61 +      "embedding": [...],  # Vector for similarity search
+       62 +      "inherited_from": ["parent1_reasoning_087", "parent2_reasoning_134"]
+       63    }
+       64 +  ```
+       65    
+       66 -  # NOT STORED (goes to shared RAG if needed):
+       67 -  "The actual paragraph content about WWII and economics..."
+       66 +  **What does NOT get stored:**
+       67 +  ```python
+       68 +  # Goes to shared RAG if needed (Layer 2):
+       69 +  "In 1950, Alan Turing proposed a test..."  # The actual output content
+       70    ```
+       71    
+       72    ---
+
+● Update(docs/brainstorming/REFINEMENT.md)
+  ⎿  Updated docs/brainstorming/REFINEMENT.md with 54 additions                                                     
+        71    
+        72    ---
+        73    
+        74 +  ## Implementation: The 4-Step Process
+        75 +  
+        76 +  **Key Challenge**: LLM APIs don't expose internal reasoning—only final outputs.
+        77 +  
+        78 +  **Solution**: Induce the model to externalize reasoning via structured prompts.
+        79 +  
+        80 +  ### Step 1: Capture the Reasoning Trace
+        81 +  
+        82 +  Add to system prompt:
+        83 +  ```
+        84 +  SYSTEM: You are an intro writer. When generating content, include your
+        85 +  reasoning under <think> tags and your final output under <final> tags.
+        86 +  ```
+        87 +  
+        88 +  Provide context from:
+        89 +  - Retrieved reasoning patterns (from vector DB)
+        90 +  - Shared RAG knowledge (domain facts)
+        91 +  - Reasoning traces from other agents (40/30/20/10 distribution)
+        92 +  
+        93 +  ### Step 2: Extract and Store the Reasoning
+        94 +  
+        95 +  Parse the LLM response:
+        96 +  1. Extract `<think>` section → this is the reasoning pattern
+        97 +  2. Extract `<final>` section → this is the output (optional: store in shared RAG)
+        98 +  3. Structure as reasoning unit with metadata:
+        99 +     - `situation`, `tactic`, `reasoning`
+       100 +     - `score`, `retrieval_count`, `generation`
+       101 +     - `provenance`, `embedding`, `inherited_from`
+       102 +  
+       103 +  ### Step 3: Retrieval by Reasoning Similarity
+       104 +  
+       105 +  Next generation, similar task:
+       106 +  1. Embed the new task description
+       107 +  2. Search vector DB for similar reasoning patterns (NOT content)
+       108 +  3. Filter by `score > 7.0` (only high-performing reasoning)
+       109 +  4. Return top-k reasoning patterns
+       110 +  5. Include in context for next generation
+       111 +  
+       112 +  ### Step 4: Scoring and Compaction
+       113 +  
+       114 +  After evaluation:
+       115 +  1. Score the output (LLM evaluator: engagement, clarity, depth)
+       116 +  2. Update reasoning unit's score
+       117 +  3. Increment `retrieval_count` each time pattern is used
+       118 +  4. Periodically (every 10 generations):
+       119 +     - Prune low performers (score < 6.0 after 20+ uses)
+       120 +     - Merge similar patterns (cluster by embedding distance)
+       121 +     - Abstract new patterns from successful combinations
+       122 +     - Compact and pass to offspring
+       123 +  
+       124 +  **This is the evolutionary loop**: Good reasoning patterns survive and propagate, bad ones get pruned.
+       125 +  
+       126 +  ---
+       127 +  
+       128    ## Three-Layer Architecture
+       129    
+       130    ```
+
+● Update(docs/brainstorming/REFINEMENT.md)
+  ⎿  Updated docs/brainstorming/REFINEMENT.md with 3 additions                                        
+       261    - Everything depends on this
+       262    - Changes `MemoryManager` → `ReasoningMemory` + `SharedRAG`
+       263    - Updates storage schema for reasoning patterns
+       264 +  - **Implementation**: Use `<think>` tags to capture reasoning, `<final>` tags for output
+       265 +  - Extract `<think>` content → store as reasoning pattern
+       266 +  - Extract `<final>` content → optionally store in shared RAG
+       267    
+       268    ### Priority 1: Update M1 Branches
+       269    
+
+● Update(docs/planning/CONSOLIDATED_PLAN.md)
+  ⎿  Updated docs/planning/CONSOLIDATED_PLAN.md with 9 additions and 2 removals             
+       660       - Rename `MemoryManager` → `ReasoningMemory`
+       661       - Store reasoning patterns (planning steps + execution traces), NOT content
+       662       - Create separate `SharedRAG` class for domain knowledge
+       663 -     - Update storage schema to match README examples
+       664 -     - Add `planning_steps` and `execution_trace` fields
+       663 +     - **Implementation approach**:
+       664 +       - Add `<think>` and `<final>` tags to system prompts
+       665 +       - Parse LLM responses to extract `<think>` section
+       666 +       - Store `<think>` content as reasoning pattern with metadata
+       667 +       - Optionally store `<final>` content in shared RAG
+       668 +     - Update storage schema:
+       669 +       - `situation`, `tactic`, `reasoning` (extracted from `<think>`)
+       670 +       - `score`, `retrieval_count`, `generation`, `provenance`, `embedding`
+       671 +       - `inherited_from` (lineage tracking)
+       672       - **This is foundational**: Other branches depend on this
+       673    
+       674    ### Priority 1: Update M1 Branches for Reasoning Patterns
+
+● Excellent! I've integrated the implementation details into both documents. Here's what's been updated:
+
+  Summary of Changes
+
+  1. CONSOLIDATED_PLAN.md - Major Updates
+
+  Added "Implementation: Capturing Reasoning Patterns" section showing the practical 4-step process:
+
+  Step 1: Capture the Reasoning Trace
+
+  SYSTEM: You are an intro writer. Include reasoning under <think> tags
+  and your final output under <final> tags.
+
+  The LLM responds with:
+  <think>
+  Based on past patterns, I should:
+  1. Start with historical anchor
+  2. Add statistic for credibility
+  3. End with provocative question
+  ...
+  </think>
+
+  <final>
+  In 1950, Alan Turing proposed a test...
+  </final>
+
+  Step 2: Extract and Store the Reasoning
+
+  - Parse <think> section → reasoning pattern
+  - Parse <final> section → output (goes to shared RAG if needed)
+  - Store as structured unit with metadata
+
+  Step 3: Retrieval by Reasoning Similarity
+
+  - Search by <think> content similarity, NOT output content
+  - Filter by score > 7.0 (high-performing reasoning only)
+  - Return top-k patterns for context
+
+  Step 4: Scoring and Compaction
+
+  - Score output quality → update reasoning pattern
+  - Track retrieval_count
+  - Periodically prune, merge, compact, inherit
+
+  2. Key Distinctions Added
+
+  Traditional RAG vs Reasoning Pattern Retrieval:
+  - Traditional RAG: "What information is relevant?" (facts, documents)
+  - Reasoning Pattern Retrieval: "How did I solve similar problems?" (cognitive strategies)
+  - Shared RAG (Layer 2): "What facts do I need?" (domain knowledge for all agents)
+
+  What gets stored:
+  - <think> → Per-agent reasoning collection (Layer 3: Evolving)
+  - <final> → Shared RAG if needed (Layer 2: Fixed)
+  - Prompts → Never change (Layer 1: Frozen)
+
+  3. Updated Priority 0 (CRITICAL)
+
+  Refactor M1.2 now includes concrete implementation:
+  - Add <think> and <final> tags to system prompts
+  - Parse LLM responses to extract reasoning
+  - Store reasoning patterns with metadata:
+    - situation, tactic, reasoning (from <think>)
+    - score, retrieval_count, generation
+    - provenance, embedding, inherited_from
+
+  4. REFINEMENT.md Updates
+
+  Added complete 4-step implementation process with the same detail as CONSOLIDATED_PLAN.
+
+  The Complete Architecture Now
+
+  Three Layers + Implementation:
+
+  1. Layer 1 (Prompts): Fixed interface + <think>/<final> tags
+  2. Layer 2 (Shared RAG): Domain knowledge from <final> tags
+  3. Layer 3 (Reasoning): Cognitive patterns from <think> tags
+
+  The Evolutionary Loop:
+  1. Agent generates with <think> + <final> sections
+  2. Extract <think> → reasoning pattern
+  3. Score output quality → update pattern metadata
+  4. Good patterns survive, bad ones pruned
+  5. Offspring inherit compacted reasoning patterns
+  6. Next generation retrieves parent reasoning patterns by similarity
+
+  Next Steps (Recommended Order)
+
+  1. Priority 0: Refactor M1.2 to implement <think>/<final> parsing
+  2. Priority 1: Update M1.4 and M1.5 to use reasoning patterns
+  3. Priority 2: Verify 20-generation test with reasoning inheritance
+  4. Priority 3: Proceed to M2 (reasoning pattern compaction strategies)
+
+  The architecture is now fully concrete: we know what to store (reasoning patterns), how to capture them (<think> tags), and why this
+  works (models think in embeddings, vector search finds similar cognitive structures).
+
+> /export 
+  ⎿  Failed to copy to clipboard. Make sure `xclip` or `wl-copy` is installed on your system and try again.
+
+
+
