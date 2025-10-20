@@ -28,6 +28,8 @@ from lean.base_agent_v2 import create_agents_v2
 from lean.context_manager import ContextManager
 from lean.evaluation import ContentEvaluator
 from lean.visualization import StreamVisualizer
+from lean.agent_pool import AgentPool
+from lean.reproduction import SexualReproduction
 
 
 class PipelineV2:
@@ -38,7 +40,9 @@ class PipelineV2:
         reasoning_dir: str = "./data/reasoning",
         shared_rag_dir: str = "./data/shared_rag",
         agent_ids: Optional[Dict[str, str]] = None,
-        domain: str = "General"
+        domain: str = "General",
+        population_size: int = 5,
+        evolution_frequency: int = 10
     ):
         """Initialize V2 pipeline.
 
@@ -47,16 +51,25 @@ class PipelineV2:
             shared_rag_dir: Directory for shared knowledge base
             agent_ids: Optional dict mapping role → agent_id
             domain: Domain category for this pipeline instance
+            population_size: Number of agents per role in evolutionary pool
+            evolution_frequency: Trigger evolution every N generations
         """
         self.domain = domain
         self.generation_counter = 0
+        self.evolution_frequency = evolution_frequency
 
-        # Create V2 agents with factory
-        self.agents = create_agents_v2(
+        # Create initial V2 agents with factory
+        initial_agents = create_agents_v2(
             reasoning_dir=reasoning_dir,
             shared_rag_dir=shared_rag_dir,
             agent_ids=agent_ids
         )
+
+        # Store shared_rag reference for evolution
+        self.shared_rag = initial_agents['intro'].shared_rag
+
+        # Initialize reproduction strategy for evolution
+        self.reproduction_strategy = SexualReproduction()
 
         # Initialize context manager for reasoning trace distribution
         self.context_manager = ContextManager(
@@ -70,13 +83,23 @@ class PipelineV2:
         self.evaluator = ContentEvaluator()
         self.visualizer = StreamVisualizer()
 
-        # Create agent pools for context manager
-        # For now, just wrap agents in simple structure
-        # In full M2 implementation, these would be proper AgentPool instances
+        # Create agent pools with M2 evolution (replaces SimpleAgentPool)
         self.agent_pools = {
-            'intro': SimpleAgentPool('intro', [self.agents['intro']]),
-            'body': SimpleAgentPool('body', [self.agents['body']]),
-            'conclusion': SimpleAgentPool('conclusion', [self.agents['conclusion']])
+            'intro': AgentPool(
+                role='intro',
+                initial_agents=[initial_agents['intro']],
+                max_size=population_size
+            ),
+            'body': AgentPool(
+                role='body',
+                initial_agents=[initial_agents['body']],
+                max_size=population_size
+            ),
+            'conclusion': AgentPool(
+                role='conclusion',
+                initial_agents=[initial_agents['conclusion']],
+                max_size=population_size
+            )
         }
 
         # Build LangGraph
@@ -134,7 +157,8 @@ class PipelineV2:
         Returns:
             Updated state with intro content and reasoning
         """
-        agent = self.agents['intro']
+        # Select agent from pool (fitness-proportionate)
+        agent = self.agent_pools['intro'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
 
         start_time = time.time()
@@ -215,7 +239,8 @@ class PipelineV2:
         Returns:
             Updated state with body content and reasoning
         """
-        agent = self.agents['body']
+        # Select agent from pool (fitness-proportionate)
+        agent = self.agent_pools['body'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
 
         start_time = time.time()
@@ -285,7 +310,7 @@ class PipelineV2:
         """Execute conclusion agent with 8-step cycle (steps 2-5).
 
         Steps:
-        2. PLAN → Retrieve similar reasoning patterns
+        2. PLAN → Retrieve similar patterns
         3. RETRIEVE → Query shared RAG
         4. CONTEXT → Assemble reasoning traces (includes intro + body)
         5. GENERATE → Create content with reasoning
@@ -296,7 +321,8 @@ class PipelineV2:
         Returns:
             Updated state with conclusion content and reasoning
         """
-        agent = self.agents['conclusion']
+        # Select agent from pool (fitness-proportionate)
+        agent = self.agent_pools['conclusion'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
 
         start_time = time.time()
@@ -381,14 +407,17 @@ class PipelineV2:
         return state
 
     def _evolve_node(self, state: BlogState) -> BlogState:
-        """Store reasoning patterns and evolve agents (STEP 7).
+        """Store reasoning patterns and evolve agents (STEPS 7-8).
 
         Steps:
-        - Record fitness for each agent
-        - Store reasoning patterns (all patterns, no threshold)
-        - Store outputs in shared RAG (only if score >= 8.0)
+        7. STORE → Store reasoning patterns and outputs
+        8. EVOLVE → Trigger population evolution (every N generations)
 
-        Note: STEP 8 (reproduction, selection) is handled separately in M2.
+        Evolution cycle (when triggered):
+        - Selection: Choose best agents as parents
+        - Compaction: Forget unsuccessful patterns
+        - Reproduction: Create offspring with inherited patterns
+        - Population replacement: New generation replaces old
 
         Args:
             state: Current workflow state with scores
@@ -396,31 +425,50 @@ class PipelineV2:
         Returns:
             Updated state
         """
-        # Store reasoning and outputs for each agent
-        for role, agent in self.agents.items():
+        # STEP 7: Store reasoning and outputs for ALL agents in ALL pools
+        for role, pool in self.agent_pools.items():
             score = state['scores'].get(role, 0.0)
 
-            # Record fitness
-            agent.record_fitness(score=score, domain=self.domain)
+            # Store for all agents in pool
+            for agent in pool.agents:
+                # Record fitness
+                agent.record_fitness(score=score, domain=self.domain)
 
-            # Store reasoning pattern and conditionally store output
-            agent.store_reasoning_and_output(score=score)
+                # Store reasoning pattern and conditionally store output
+                agent.store_reasoning_and_output(score=score)
 
-        # Get statistics for logging
-        intro_stats = self.agents['intro'].get_stats()
-        body_stats = self.agents['body'].get_stats()
-        conclusion_stats = self.agents['conclusion'].get_stats()
+        # Get pool statistics for logging
+        intro_pool_avg = self.agent_pools['intro'].avg_fitness()
+        body_pool_avg = self.agent_pools['body'].avg_fitness()
+        conclusion_pool_avg = self.agent_pools['conclusion'].avg_fitness()
 
-        # Log
         state['stream_logs'].append(
-            f"[evolve] Reasoning patterns stored. "
-            f"Intro: {intro_stats['reasoning_patterns']} patterns (avg: {intro_stats['avg_fitness']:.1f}), "
-            f"Body: {body_stats['reasoning_patterns']} patterns (avg: {body_stats['avg_fitness']:.1f}), "
-            f"Conclusion: {conclusion_stats['reasoning_patterns']} patterns (avg: {conclusion_stats['avg_fitness']:.1f})"
+            f"[evolve] Pool avg fitness: "
+            f"Intro: {intro_pool_avg:.1f}, "
+            f"Body: {body_pool_avg:.1f}, "
+            f"Conclusion: {conclusion_pool_avg:.1f}"
         )
 
-        # Log shared RAG growth
-        shared_rag_stats = self.agents['intro'].shared_rag.get_stats()
+        # STEP 8: Trigger evolution every N generations
+        if self.generation_counter > 0 and self.generation_counter % self.evolution_frequency == 0:
+            state['stream_logs'].append(
+                f"[evolve] 🧬 EVOLUTION TRIGGERED (generation {self.generation_counter})"
+            )
+
+            # Evolve each pool
+            for role, pool in self.agent_pools.items():
+                pool.evolve_generation(
+                    reproduction_strategy=self.reproduction_strategy,
+                    shared_rag=self.shared_rag
+                )
+
+                state['stream_logs'].append(
+                    f"[evolve] {role.capitalize()} pool → Generation {pool.generation} "
+                    f"(avg fitness: {pool.avg_fitness():.1f})"
+                )
+
+        # Log shared RAG growth (using any agent from any pool)
+        shared_rag_stats = self.shared_rag.get_stats()
         state['stream_logs'].append(
             f"[evolve] Shared RAG: {shared_rag_stats['total_knowledge']} items"
         )
@@ -475,14 +523,20 @@ class PipelineV2:
         return final_state
 
     def get_agent_stats(self) -> Dict:
-        """Get statistics for all agents.
+        """Get statistics for all agent pools.
 
         Returns:
-            Dictionary of agent stats
+            Dictionary of pool stats
         """
         return {
-            role: agent.get_stats()
-            for role, agent in self.agents.items()
+            role: {
+                'generation': pool.generation,
+                'pool_size': len(pool.agents),
+                'avg_fitness': pool.avg_fitness(),
+                'top_agent_fitness': pool.agents[0].avg_fitness() if pool.agents else 0.0,
+                'diversity': pool.measure_diversity()
+            }
+            for role, pool in self.agent_pools.items()
         }
 
     def get_shared_rag_stats(self) -> Dict:
@@ -491,7 +545,7 @@ class PipelineV2:
         Returns:
             Shared RAG statistics dict
         """
-        return self.agents['intro'].shared_rag.get_stats()
+        return self.shared_rag.get_stats()
 
     def get_context_flow_stats(self) -> Dict:
         """Get context flow diversity statistics.
@@ -500,31 +554,3 @@ class PipelineV2:
             Context flow diversity metrics
         """
         return self.context_manager.measure_diversity(recent_n=10)
-
-
-class SimpleAgentPool:
-    """Simple agent pool wrapper for ContextManager compatibility."""
-
-    def __init__(self, role: str, agents: list):
-        self.role = role
-        self.agents = agents
-
-    def get_top_n(self, n: int = 2):
-        """Get top N agents by fitness."""
-        sorted_agents = sorted(
-            self.agents,
-            key=lambda a: a.avg_fitness(),
-            reverse=True
-        )
-        return sorted_agents[:n]
-
-    def get_random_lower_half(self):
-        """Get random agent from lower half by fitness."""
-        import random
-        sorted_agents = sorted(self.agents, key=lambda a: a.avg_fitness())
-        lower_half = sorted_agents[:len(sorted_agents)//2] if len(sorted_agents) > 1 else sorted_agents
-        return random.choice(lower_half) if lower_half else self.agents[0]
-
-    def size(self):
-        """Get pool size."""
-        return len(self.agents)
