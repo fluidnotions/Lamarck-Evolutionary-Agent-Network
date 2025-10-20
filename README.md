@@ -124,9 +124,11 @@ Memories are **reasoning patterns**, not domain knowledge:
 }
 ```
 
-**Critical distinction:**
-- **NOT stored**: The actual content produced (goes to shared RAG if needed)
-- **Stored**: The reasoning process that produced high-scoring content
+**Critical distinction (storage has two paths):**
+- **Individual memory** (per-agent): ALL reasoning patterns stored (no threshold) → periodically compacted → best 20-30% inherited by offspring
+- **Shared RAG** (global): ONLY high-quality content (score ≥8.0) stored → available to all agents as domain knowledge
+
+This separation enables Lamarckian evolution: agents inherit their parents' **best** cognitive strategies (after forgetting unsuccessful ones) while sharing domain facts
 
 ### Evolutionary Operators
 
@@ -169,12 +171,14 @@ Each agent, each generation:
 4. **Receive context**: Get reasoning traces from other agents (40% hierarchy, 30% high-performers, 20% random, 10% peer)
 5. **Generate**: Execute plan using fixed prompt + evolved reasoning + retrieved knowledge
 6. **Evaluate**: Get scored by LLM on quality factors
-7. **Store**: Add reasoning pattern + score to personal memory (not the content)
-8. **Evolve** (every 10 generations):
+7. **Store** (two paths):
+   - Reasoning pattern → individual memory (ALL patterns, no threshold)
+   - Output content → shared RAG (ONLY if score ≥8.0)
+8. **Evolve** (every N generations, M2 implementation):
+   - **Compaction**: Forget unsuccessful patterns (keep top 20-30%)
    - **Selection**: Best reasoners chosen as parents
-   - **Compaction**: Merge + distill parents' cognitive strategies
    - **Reproduction**: Child inherits compacted reasoning patterns
-   - **Population management**: Based on reasoning diversity
+   - **Population management**: Maintain diversity
 
 **Key insight:** Adding a successful planning step from memory is functionally equivalent to editing a prompt to include that step, but it happens dynamically through retrieval rather than manual engineering.
 
