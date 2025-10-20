@@ -168,14 +168,8 @@ class AsexualReproduction(ReproductionStrategy):
         inherited_patterns: List[Dict],
         shared_rag: 'SharedRAG'
     ) -> 'BaseAgentV2':
-        """Create offspring agent with inherited patterns.
-
-        This is a placeholder that will be replaced with actual agent creation
-        when integrated with base_agent_v2.
-        """
-        # This will be implemented when integrating with AgentPool
-        # For now, return a mock agent
-        from lean.base_agent_v2 import create_agents_v2
+        """Create offspring agent with inherited patterns."""
+        from lean.base_agent_v2 import IntroAgentV2, BodyAgentV2, ConclusionAgentV2
         from lean.reasoning_memory import ReasoningMemory
 
         # Create agent with inherited patterns
@@ -187,14 +181,26 @@ class AsexualReproduction(ReproductionStrategy):
             inherited_reasoning=inherited_patterns
         )
 
-        # Create agent (will use factory when integrated)
-        agents = create_agents_v2(
-            shared_rag=shared_rag,
-            agent_ids={role: child_id},
-            reasoning_memories={role: memory}
+        # Map role to agent class
+        agent_classes = {
+            'intro': IntroAgentV2,
+            'body': BodyAgentV2,
+            'conclusion': ConclusionAgentV2
+        }
+
+        agent_class = agent_classes.get(role)
+        if not agent_class:
+            raise ValueError(f"Unknown role: {role}")
+
+        # Create agent directly
+        agent = agent_class(
+            role=role,
+            agent_id=f"{role}_{child_id}",
+            reasoning_memory=memory,
+            shared_rag=shared_rag
         )
 
-        return agents[role]
+        return agent
 
 
 class SexualReproduction(ReproductionStrategy):
@@ -307,7 +313,7 @@ class SexualReproduction(ReproductionStrategy):
     ) -> 'BaseAgentV2':
         """Create offspring agent with inherited patterns."""
         # Same as asexual for now
-        from lean.base_agent_v2 import create_agents_v2
+        from lean.base_agent_v2 import IntroAgentV2, BodyAgentV2, ConclusionAgentV2
         from lean.reasoning_memory import ReasoningMemory
 
         child_id = f"{role}_gen{generation}_child{uuid.uuid4().hex[:6]}"
@@ -317,13 +323,26 @@ class SexualReproduction(ReproductionStrategy):
             inherited_reasoning=inherited_patterns
         )
 
-        agents = create_agents_v2(
-            shared_rag=shared_rag,
-            agent_ids={role: child_id},
-            reasoning_memories={role: memory}
+        # Map role to agent class
+        agent_classes = {
+            'intro': IntroAgentV2,
+            'body': BodyAgentV2,
+            'conclusion': ConclusionAgentV2
+        }
+
+        agent_class = agent_classes.get(role)
+        if not agent_class:
+            raise ValueError(f"Unknown role: {role}")
+
+        # Create agent directly
+        agent = agent_class(
+            role=role,
+            agent_id=f"{role}_{child_id}",
+            reasoning_memory=memory,
+            shared_rag=shared_rag
         )
 
-        return agents[role]
+        return agent
 
 
 # Convenience factory function
