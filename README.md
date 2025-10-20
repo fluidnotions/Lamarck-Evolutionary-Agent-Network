@@ -486,17 +486,30 @@ PROMPTS_IMMUTABLE=true          # Never modify prompts
 ## Current Status
 
 **Implementation Progress:**
-- ✅ Three-layer architecture design
-- ✅ Reasoning pattern storage structure
-- ⏳ Reasoning retrieval by structural similarity
-- ⏳ Pattern compaction strategies
-- ⏳ Evolutionary workflow with reasoning inheritance
+- ✅ Three-layer architecture fully implemented
+- ✅ Reasoning pattern storage (ReasoningMemory class)
+- ✅ Reasoning retrieval by structural similarity + score weighting
+- ✅ Shared RAG for domain knowledge (SharedRAG class)
+- ✅ BaseAgentV2 with <think>/<final> tag externalization
+- ✅ Context distribution (40/30/20/10 weighted reasoning traces)
+- ✅ 8-step learning cycle (steps 1-7 complete)
+- ✅ Agent factory function (create_agents_v2())
+- ✅ Comprehensive test suite (8/8 tests passing)
+- ⏳ Pattern compaction strategies (M2 - future)
+- ⏳ Evolutionary selection and reproduction (M2 - future)
+- ⏳ Pipeline integration (next step)
 
 **Working Features:**
-- Fixed prompt layer
-- Shared RAG for domain knowledge
-- Basic reasoning pattern structure
-- Evaluation framework
+- Fixed prompt layer (IntroAgentV2, BodyAgentV2, ConclusionAgentV2)
+- Shared RAG with quality threshold (score ≥ 8.0)
+- Per-agent reasoning pattern memory with inheritance support
+- <think>/<final> tag parsing for reasoning externalization
+- ContextManager for reasoning trace distribution
+- Fitness tracking and evaluation framework
+- Storage separation (reasoning vs. domain knowledge)
+- One-line migration from old agents via factory function
+
+**Status**: Core reasoning pattern architecture complete. Ready for pipeline integration and multi-generation testing.
 
 ---
 
