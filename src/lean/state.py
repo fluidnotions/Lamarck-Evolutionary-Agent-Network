@@ -84,6 +84,14 @@ class BlogState(TypedDict):
     agent_weights: Dict[str, Dict[str, float]]  # {agent: {peer: trust_weight}}
     weight_history: List[Dict[str, float]]  # [{generation, agent, peer, weight, delta}]
 
+    # NEW: Reasoning patterns (V2 architecture)
+    intro_reasoning: str  # <think> content from intro agent
+    body_reasoning: str  # <think> content from body agent
+    conclusion_reasoning: str  # <think> content from conclusion agent
+    reasoning_patterns_used: Dict[str, int]  # {role: count} - patterns retrieved
+    domain_knowledge_used: Dict[str, int]  # {role: count} - knowledge items retrieved
+    generation_number: int  # Which generation in the sequence (for M2)
+
 
 class AgentOutput(TypedDict):
     """Output from an agent with metadata."""
@@ -152,6 +160,12 @@ def create_initial_state(topic: str) -> BlogState:
             "conclusion": {},
         },
         weight_history=[],
+        intro_reasoning="",
+        body_reasoning="",
+        conclusion_reasoning="",
+        reasoning_patterns_used={},
+        domain_knowledge_used={},
+        generation_number=0,
     )
 
 
