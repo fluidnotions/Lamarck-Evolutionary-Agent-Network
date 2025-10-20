@@ -184,6 +184,10 @@ class AgentPool:
 
         return sum(a.avg_fitness() for a in self.agents) / len(self.agents)
 
+    def size(self) -> int:
+        """Get current pool size."""
+        return len(self.agents)
+
     def measure_diversity(self) -> float:
         """Measure reasoning pattern diversity using embedding distances."""
         if len(self.agents) < 2:
