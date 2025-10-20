@@ -35,7 +35,19 @@ M2 implements **Step 8: EVOLVE** of the 8-step learning cycle:
 
 **Key Design Principle**: LangGraph handles workflow orchestration, Python classes handle algorithms.
 
-See: `docs/brainstorming/2025-10-20-M2-LANGGRAPH-ARCHITECTURE.md` for complete architecture.
+### Subgraph Architecture (Reusable Evolution Layer)
+
+M2 uses **subgraphs** to separate task logic from evolution logic:
+
+- **Inner Subgraph** (Task Workflow): Pure task logic (blog, research, etc.) - knows nothing about evolution
+- **Outer Wrapper** (Evolution): Reusable evolution logic - works with ANY task workflow
+- **Composition**: Compile task workflow and use it as a node in evolution wrapper
+
+This makes evolution a **reusable layer** you can attach to any existing LangGraph workflow!
+
+See detailed architecture:
+- **Subgraph design**: `docs/brainstorming/2025-10-20-M2-SUBGRAPH-ARCHITECTURE.md`
+- **LangGraph integration**: `docs/brainstorming/2025-10-20-M2-LANGGRAPH-ARCHITECTURE.md`
 
 ---
 
@@ -395,19 +407,56 @@ git worktree add ../lean-agent-pools -b m2-agent-pools develop
 
 ### Development Order
 
-**Phase 1: Core Components (Parallel)**
+**Phase 1: Python Utilities (Parallel - No LangGraph)**
 - [ ] Worktree 1: Compaction strategies (`m2-compaction`)
+  - Pure Python strategy classes
+  - Unit tests in isolation
 - [ ] Worktree 2: Selection algorithms (`m2-selection`)
+  - Pure Python strategy classes
+  - Unit tests with mock pools
 - [ ] Worktree 3: Reproduction logic (`m2-reproduction`)
+  - Pure Python strategy classes
+  - Unit tests with mock agents
+
+**Phase 2: Data Structures (Depends on Phase 1)**
 - [ ] Worktree 4: Agent pools (`m2-agent-pools`)
+  - AgentPool class using strategy pattern
+  - Integration tests with real strategies
+  - Merge worktrees 1-3 first before implementing
 
-**Phase 2: Integration (Sequential)**
-- [ ] Merge all features into develop
-- [ ] Update PipelineV2 with evolution support
-- [ ] Create integration tests
-- [ ] Run 20-generation validation
+**Phase 3: Workflow Refactoring (Subgraph Separation)**
+- [ ] Extract task workflow from PipelineV2
+  - Create `src/lean/workflows/blog_workflow.py`
+  - Move intro/body/conclusion nodes
+  - Remove evolution logic (pure task execution)
+  - Update to use `state['selected_agents']`
 
-**Phase 3: Validation (Sequential)**
+**Phase 4: Evolution Wrapper (Reusable Layer)**
+- [ ] Create `src/lean/evolution/wrapper.py`
+  - EvolutionWrapper class
+  - select_agents_node
+  - execute_task_node (subgraph!)
+  - evaluate_node
+  - store_node
+  - evolve_node
+  - Accepts ANY task workflow as subgraph
+
+**Phase 5: Integration (Update PipelineV2)**
+- [ ] Update `src/lean/pipeline_v2.py`
+  - Use EvolutionWrapper internally
+  - Maintain backward compatible API
+  - Pass blog_workflow as subgraph
+- [ ] Update `src/lean/state.py`
+  - Add `selected_agents` field to BlogState
+
+**Phase 6: Testing**
+- [ ] Unit tests for EvolutionWrapper
+- [ ] Integration tests with blog workflow
+- [ ] Integration tests with mock workflows
+- [ ] Backward compatibility tests
+
+**Phase 7: Validation**
+- [ ] Run 20-generation experiment
 - [ ] Compare evolved vs. non-evolved agents
 - [ ] Measure fitness improvement over generations
 - [ ] Analyze compaction effectiveness
