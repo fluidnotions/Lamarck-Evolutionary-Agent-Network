@@ -1,330 +1,303 @@
-"""
-Tests for AgentPool class and agent pool management.
-"""
-
+"""Tests for AgentPool - integration of Phase 1 utilities."""
 import pytest
-import random
-from lean.agent_pool import AgentPool, create_agent_pool
-from lean.agents import IntroAgent
-from lean.memory import MemoryManager
+import tempfile
+import shutil
+
+from lean.agent_pool import AgentPool, create_agent_pools
+from lean.base_agent_v2 import create_agents_v2
+from lean.shared_rag import SharedRAG
+from lean.compaction import HybridCompaction, ScoreBasedCompaction
+from lean.selection import TournamentSelection, RankBasedSelection
+from lean.reproduction import SexualReproduction, AsexualReproduction
 
 
 @pytest.fixture
-def sample_pool():
-    """Create a sample agent pool for testing."""
-    return create_agent_pool("intro", population_size=5)
+def temp_dirs():
+    """Create temporary directories for testing."""
+    reasoning_dir = tempfile.mkdtemp()
+    shared_rag_dir = tempfile.mkdtemp()
+
+    yield reasoning_dir, shared_rag_dir
+
+    # Cleanup
+    shutil.rmtree(reasoning_dir, ignore_errors=True)
+    shutil.rmtree(shared_rag_dir, ignore_errors=True)
 
 
-def test_agent_pool_initialization():
-    """Test AgentPool initialization with correct parameters."""
-    pool = AgentPool(role="intro", population_size=5, min_size=3, max_size=8)
-
-    assert pool.role == "intro"
-    assert pool.min_size == 3
-    assert pool.max_size == 8
-    assert pool.generation == 0
-    assert len(pool.agents) == 0  # Empty until agents added
+@pytest.fixture
+def shared_rag(temp_dirs):
+    """Create shared RAG for testing."""
+    _, shared_rag_dir = temp_dirs
+    return SharedRAG(persist_directory=shared_rag_dir)
 
 
-def test_create_agent_pool():
-    """Test factory function creates populated pool."""
-    pool = create_agent_pool("intro", population_size=5)
+@pytest.fixture
+def initial_agents(temp_dirs):
+    """Create initial agents for testing."""
+    reasoning_dir, shared_rag_dir = temp_dirs
 
-    assert pool.size() == 5
-    assert pool.role == "intro"
-    assert all(a.role == "intro" for a in pool.agents)
-    assert all(hasattr(a, 'agent_id') for a in pool.agents)
-    assert all(hasattr(a, 'fitness_history') for a in pool.agents)
-
-
-def test_create_agent_pool_all_roles():
-    """Test pool creation for all three roles."""
-    for role in ["intro", "body", "conclusion"]:
-        pool = create_agent_pool(role, population_size=3)
-        assert pool.size() == 3
-        assert pool.role == role
-
-
-def test_create_agent_pool_invalid_role():
-    """Test pool creation fails with invalid role."""
-    with pytest.raises(ValueError, match="Unknown role"):
-        create_agent_pool("invalid_role", population_size=5)
-
-
-def test_create_agent_pool_invalid_population_size():
-    """Test pool creation fails with invalid population size."""
-    with pytest.raises(ValueError, match="population_size"):
-        create_agent_pool("intro", population_size=10, min_size=3, max_size=8)
-
-    with pytest.raises(ValueError, match="population_size"):
-        create_agent_pool("intro", population_size=2, min_size=3, max_size=8)
-
-
-def test_add_agent(sample_pool):
-    """Test adding agent to pool."""
-    initial_size = sample_pool.size()
-
-    # Create new agent
-    memory = MemoryManager(collection_name="test_memories")
-    new_agent = IntroAgent(role="intro", memory_manager=memory)
-    new_agent.agent_id = "test_agent"
-    new_agent.fitness_history = []
-    new_agent.task_count = 0
-
-    # Add method
-    import types
-    new_agent.avg_fitness = types.MethodType(
-        lambda self: 0.0 if not self.fitness_history else sum(self.fitness_history) / len(self.fitness_history),
-        new_agent
+    agents = create_agents_v2(
+        reasoning_dir=reasoning_dir,
+        shared_rag_dir=shared_rag_dir,  # Fixed: use shared_rag_dir
+        agent_ids={
+            'intro': 'intro_test_1',
+            'body': 'body_test_1',
+            'conclusion': 'conclusion_test_1'
+        }
     )
 
-    sample_pool.add_agent(new_agent)
-
-    assert sample_pool.size() == initial_size + 1
-    assert new_agent in sample_pool.agents
+    return agents
 
 
-def test_add_agent_at_max_size():
-    """Test adding agent fails when pool at max size."""
-    pool = create_agent_pool("intro", population_size=8, max_size=8)
+def test_agent_pool_initialization(initial_agents):
+    """Test basic pool initialization."""
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[initial_agents['intro']],
+        max_size=5
+    )
 
-    memory = MemoryManager(collection_name="test_memories")
-    new_agent = IntroAgent(role="intro", memory_manager=memory)
-
-    with pytest.raises(ValueError, match="maximum size"):
-        pool.add_agent(new_agent)
-
-
-def test_remove_agent(sample_pool):
-    """Test removing agent from pool."""
-    initial_size = sample_pool.size()
-    agent_to_remove = sample_pool.agents[0]
-
-    result = sample_pool.remove_agent(agent_to_remove.agent_id)
-
-    assert result is True
-    assert sample_pool.size() == initial_size - 1
-    assert agent_to_remove not in sample_pool.agents
+    assert pool.role == 'intro'
+    assert len(pool.agents) == 1
+    assert pool.max_size == 5
+    assert pool.generation == 0
+    assert len(pool.history) == 1  # Initial stats recorded
 
 
-def test_remove_agent_not_found(sample_pool):
-    """Test removing nonexistent agent returns False."""
-    result = sample_pool.remove_agent("nonexistent_agent")
-    assert result is False
+def test_agent_pool_select_agent(initial_agents):
+    """Test agent selection from pool."""
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[initial_agents['intro']],
+        max_size=5
+    )
+
+    # With single agent
+    selected = pool.select_agent()
+    assert selected == initial_agents['intro']
+
+    # Test all selection strategies
+    for strategy in ['fitness_proportionate', 'random', 'best']:
+        selected = pool.select_agent(strategy=strategy)
+        assert selected in pool.agents
 
 
-def test_remove_agent_at_min_size():
-    """Test removing agent fails when pool at minimum size."""
-    pool = create_agent_pool("intro", population_size=3, min_size=3)
+def test_agent_pool_evolve_generation(initial_agents, shared_rag):
+    """Test evolution cycle."""
+    # Give agent some fitness scores first
+    agent = initial_agents['intro']
+    for _ in range(5):
+        agent.record_fitness(score=7.5, domain='test')
 
-    with pytest.raises(ValueError, match="minimum size"):
-        pool.remove_agent(pool.agents[0].agent_id)
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[agent],
+        max_size=3,
+        selection_strategy=TournamentSelection(tournament_size=2),
+        compaction_strategy=HybridCompaction()
+    )
 
+    # Evolve
+    reproduction_strategy = SexualReproduction(mutation_rate=0.1)
+    pool.evolve_generation(
+        reproduction_strategy=reproduction_strategy,
+        shared_rag=shared_rag
+    )
 
-def test_select_best_agent(sample_pool):
-    """Test selecting best agent by fitness."""
-    # Set different fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]  # 0.0, 1.0, 2.0, 3.0, 4.0
-
-    best_agent = sample_pool.select_agent(strategy="best")
-
-    assert best_agent.avg_fitness() == 4.0
-
-
-def test_select_epsilon_greedy_exploration(sample_pool):
-    """Test epsilon-greedy with full exploration (epsilon=1.0)."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]
-
-    # With epsilon=1.0, should always explore (random)
-    random.seed(42)
-    selected = sample_pool.select_agent(strategy="epsilon_greedy", epsilon=1.0)
-
-    # Just verify it returns an agent (randomness makes specific check hard)
-    assert selected in sample_pool.agents
+    # Verify evolution happened
+    assert pool.generation == 1
+    assert len(pool.agents) == 3  # Population size
+    assert len(pool.history) == 2  # Initial + after evolution
 
 
-def test_select_epsilon_greedy_exploitation(sample_pool):
-    """Test epsilon-greedy with full exploitation (epsilon=0.0)."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]
+def test_agent_pool_fitness_tracking(initial_agents, shared_rag):
+    """Test fitness tracking across generations."""
+    agent = initial_agents['intro']
 
-    # With epsilon=0.0, should always exploit (best)
-    selected = sample_pool.select_agent(strategy="epsilon_greedy", epsilon=0.0)
+    # Give some fitness
+    for i in range(5):
+        agent.record_fitness(score=6.0 + i * 0.5, domain='test')
 
-    assert selected.avg_fitness() == 4.0
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[agent],
+        max_size=3
+    )
+
+    initial_fitness = pool.avg_fitness()
+    assert initial_fitness > 0
+
+    # Evolve multiple generations
+    reproduction_strategy = SexualReproduction(mutation_rate=0.05)
+
+    for _ in range(2):
+        # Give offspring some fitness before next evolution
+        for offspring in pool.agents:
+            offspring.record_fitness(score=7.0, domain='test')
+
+        pool.evolve_generation(
+            reproduction_strategy=reproduction_strategy,
+            shared_rag=shared_rag
+        )
+
+    assert pool.generation == 2
+    assert len(pool.history) == 3  # Initial + 2 evolutions
 
 
-def test_select_fitness_weighted(sample_pool):
-    """Test fitness-weighted selection."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i + 1)]  # 1.0, 2.0, 3.0, 4.0, 5.0
+def test_agent_pool_get_stats(initial_agents):
+    """Test statistics retrieval."""
+    agent = initial_agents['intro']
 
-    # Run multiple times, check distribution makes sense
-    random.seed(42)
-    selections = [
-        sample_pool.select_agent(strategy="fitness_weighted")
-        for _ in range(100)
+    for i in range(5):
+        agent.record_fitness(score=7.0 + i, domain='test')
+
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[agent],
+        max_size=3
+    )
+
+    stats = pool.get_stats()
+
+    assert stats['role'] == 'intro'
+    assert stats['generation'] == 0
+    assert stats['size'] == 1
+    assert stats['avg_fitness'] > 0
+    assert 'fitness_range' in stats
+    assert 'diversity' in stats
+    assert 'agents' in stats
+    assert len(stats['agents']) == 1
+
+
+def test_agent_pool_get_top_n(initial_agents, shared_rag):
+    """Test getting top N agents."""
+    agent = initial_agents['intro']
+
+    # Give fitness
+    for i in range(5):
+        agent.record_fitness(score=7.0, domain='test')
+
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[agent],
+        max_size=5
+    )
+
+    # Evolve to get multiple agents
+    pool.evolve_generation(
+        reproduction_strategy=SexualReproduction(),
+        shared_rag=shared_rag
+    )
+
+    # Give different fitness to agents
+    for i, agent in enumerate(pool.agents):
+        agent.record_fitness(score=5.0 + i, domain='test')
+
+    top_2 = pool.get_top_n(2)
+    assert len(top_2) == 2
+    assert top_2[0].avg_fitness() >= top_2[1].avg_fitness()
+
+
+def test_agent_pool_history(initial_agents, shared_rag):
+    """Test evolution history tracking."""
+    agent = initial_agents['intro']
+
+    for i in range(5):
+        agent.record_fitness(score=7.0, domain='test')
+
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[agent],
+        max_size=3
+    )
+
+    # Evolve 3 generations
+    for _ in range(3):
+        # Give fitness to offspring
+        for offspring in pool.agents:
+            offspring.record_fitness(score=7.5, domain='test')
+
+        pool.evolve_generation(
+            reproduction_strategy=SexualReproduction(),
+            shared_rag=shared_rag
+        )
+
+    history = pool.get_history()
+    assert len(history) == 4  # Initial + 3 evolutions
+
+    # Verify history structure
+    for record in history:
+        assert 'generation' in record
+        assert 'avg_fitness' in record
+        assert 'diversity' in record
+        assert 'size' in record
+
+
+def test_agent_pool_with_different_strategies(initial_agents, shared_rag):
+    """Test pool with different strategy combinations."""
+    agent = initial_agents['intro']
+
+    for i in range(5):
+        agent.record_fitness(score=8.0, domain='test')
+
+    # Test with different strategies
+    strategies = [
+        (TournamentSelection(tournament_size=2), ScoreBasedCompaction(), AsexualReproduction()),
+        (RankBasedSelection(elitism_count=1), HybridCompaction(), SexualReproduction())
     ]
 
-    # Higher fitness should be selected more often
-    best_agent = sample_pool.agents[-1]
-    worst_agent = sample_pool.agents[0]
+    for selection, compaction, reproduction in strategies:
+        pool = AgentPool(
+            role='intro',
+            initial_agents=[agent],
+            max_size=3,
+            selection_strategy=selection,
+            compaction_strategy=compaction
+        )
 
-    best_count = selections.count(best_agent)
-    worst_count = selections.count(worst_agent)
+        pool.evolve_generation(
+            reproduction_strategy=reproduction,
+            shared_rag=shared_rag
+        )
 
-    assert best_count > worst_count  # Higher fitness selected more
-
-
-def test_select_fitness_weighted_zero_fitness(sample_pool):
-    """Test fitness-weighted selection with all zero fitness."""
-    # All agents have zero fitness
-    for agent in sample_pool.agents:
-        agent.fitness_history = []
-
-    # Should not crash, should return random agent
-    selected = sample_pool.select_agent(strategy="fitness_weighted")
-    assert selected in sample_pool.agents
+        assert pool.generation == 1
+        assert len(pool.agents) == 3
 
 
-def test_select_tournament(sample_pool):
-    """Test tournament selection."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]  # 0.0, 1.0, 2.0, 3.0, 4.0
+def test_create_agent_pools_factory(initial_agents):
+    """Test factory function for creating pools."""
+    pools = create_agent_pools(
+        agents=initial_agents,
+        pool_size=5,
+        selection_strategy=TournamentSelection(tournament_size=3),
+        compaction_strategy=HybridCompaction()
+    )
 
-    # Tournament of size 3 should select best from 3 random agents
-    random.seed(42)
-    selected = sample_pool.select_agent(strategy="tournament", tournament_size=3)
+    assert len(pools) == 3  # intro, body, conclusion
+    assert 'intro' in pools
+    assert 'body' in pools
+    assert 'conclusion' in pools
 
-    # Verify it's one of the agents
-    assert selected in sample_pool.agents
-
-
-def test_select_unknown_strategy(sample_pool):
-    """Test unknown selection strategy raises error."""
-    with pytest.raises(ValueError, match="Unknown selection strategy"):
-        sample_pool.select_agent(strategy="invalid_strategy")
-
-
-def test_select_from_empty_pool():
-    """Test selection from empty pool raises error."""
-    pool = AgentPool(role="intro", population_size=5)
-
-    with pytest.raises(ValueError, match="Cannot select from empty pool"):
-        pool.select_agent(strategy="best")
+    for role, pool in pools.items():
+        assert pool.role == role
+        assert len(pool.agents) == 1  # Started with 1 agent
+        assert pool.max_size == 5
 
 
-def test_get_top_n(sample_pool):
-    """Test getting top N agents."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]  # 0.0, 1.0, 2.0, 3.0, 4.0
+def test_agent_pool_empty_agents():
+    """Test pool with no agents."""
+    pool = AgentPool(
+        role='intro',
+        initial_agents=[],
+        max_size=5
+    )
 
-    top_2 = sample_pool.get_top_n(n=2)
+    assert pool.avg_fitness() == 0.0
+    assert pool.measure_diversity() == 0.0
 
-    assert len(top_2) == 2
-    assert top_2[0].avg_fitness() == 4.0  # Best
-    assert top_2[1].avg_fitness() == 3.0  # Second best
-
-
-def test_get_top_n_exceeds_population(sample_pool):
-    """Test getting top N when N > population size."""
-    top_10 = sample_pool.get_top_n(n=10)
-
-    # Should return all agents
-    assert len(top_10) == 5
+    stats = pool.get_stats()
+    assert stats['size'] == 0
 
 
-def test_get_random_lower_half(sample_pool):
-    """Test getting random agent from lower half."""
-    # Set fitness scores
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i)]  # 0.0, 1.0, 2.0, 3.0, 4.0
-
-    # Run multiple times to test distribution
-    random.seed(42)
-    selections = [sample_pool.get_random_lower_half() for _ in range(50)]
-
-    # All selections should be from lower half (fitness 0.0, 1.0, 2.0)
-    lower_half_agents = sample_pool.agents[:2]  # First 2 agents
-
-    for selected in selections:
-        assert selected in lower_half_agents
-
-
-def test_get_random_lower_half_small_pool():
-    """Test getting random lower half with small pool."""
-    pool = create_agent_pool("intro", population_size=3, min_size=3)
-
-    # With 3 agents, lower_half should still work
-    selected = pool.get_random_lower_half()
-    assert selected in pool.agents
-
-
-def test_get_all_stats_empty_pool():
-    """Test getting stats from empty pool."""
-    pool = AgentPool(role="intro", population_size=5)
-
-    stats = pool.get_all_stats()
-
-    assert stats["role"] == "intro"
-    assert stats["population_size"] == 0
-    assert stats["generation"] == 0
-    assert stats["agents"] == []
-
-
-def test_get_all_stats_populated_pool(sample_pool):
-    """Test getting stats from populated pool."""
-    # Set fitness scores and task counts
-    for i, agent in enumerate(sample_pool.agents):
-        agent.fitness_history = [float(i + 5)]  # 5.0, 6.0, 7.0, 8.0, 9.0
-        agent.task_count = i + 1
-
-    stats = sample_pool.get_all_stats()
-
-    assert stats["role"] == "intro"
-    assert stats["population_size"] == 5
-    assert stats["avg_fitness"] == 7.0  # Mean of 5,6,7,8,9
-    assert stats["best_fitness"] == 9.0
-    assert stats["worst_fitness"] == 5.0
-    assert len(stats["agents"]) == 5
-
-    # Check agent stats structure
-    agent_stat = stats["agents"][0]
-    assert "agent_id" in agent_stat
-    assert "avg_fitness" in agent_stat
-    assert "task_count" in agent_stat
-
-
-def test_get_all_stats_no_tasks(sample_pool):
-    """Test stats when no agents have completed tasks."""
-    # All agents have empty fitness history
-    for agent in sample_pool.agents:
-        agent.fitness_history = []
-        agent.task_count = 0
-
-    stats = sample_pool.get_all_stats()
-
-    assert stats["avg_fitness"] == 0.0
-    assert stats["best_fitness"] == 0.0
-    assert stats["worst_fitness"] == 0.0
-
-
-def test_unique_agent_ids(sample_pool):
-    """Test all agents have unique IDs."""
-    agent_ids = [a.agent_id for a in sample_pool.agents]
-
-    assert len(agent_ids) == len(set(agent_ids))  # No duplicates
-
-
-def test_unique_memory_collections(sample_pool):
-    """Test all agents have unique memory collections."""
-    collection_names = [a.memory.collection_name for a in sample_pool.agents]
-
-    assert len(collection_names) == len(set(collection_names))  # No duplicates
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])
