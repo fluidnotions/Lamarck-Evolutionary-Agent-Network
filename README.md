@@ -496,12 +496,12 @@ PROMPTS_IMMUTABLE=true          # Never modify prompts
 - ✅ Shared RAG for domain knowledge (SharedRAG class)
 - ✅ BaseAgentV2 with <think>/<final> tag externalization
 - ✅ Context distribution (40/30/20/10 weighted reasoning traces)
-- ✅ 8-step learning cycle (steps 1-7 complete)
+- ✅ 8-step learning cycle (complete)
 - ✅ Agent factory function (create_agents_v2())
-- ✅ Comprehensive test suite (8/8 tests passing)
-- ⏳ Pattern compaction strategies (M2 - future)
-- ⏳ Evolutionary selection and reproduction (M2 - future)
-- ⏳ Pipeline integration (next step)
+- ✅ **M2 Phase 1: Evolution utilities** (compaction, selection, reproduction)
+- ✅ **M2 Phase 2: AgentPool integration** (population management)
+- ✅ **M2 Phase 3: Pipeline integration** (evolutionary learning cycle operational)
+- ✅ Comprehensive test suite (including evolution integration tests)
 
 **Working Features:**
 - Fixed prompt layer (IntroAgentV2, BodyAgentV2, ConclusionAgentV2)
@@ -511,9 +511,13 @@ PROMPTS_IMMUTABLE=true          # Never modify prompts
 - ContextManager for reasoning trace distribution
 - Fitness tracking and evaluation framework
 - Storage separation (reasoning vs. domain knowledge)
-- One-line migration from old agents via factory function
+- **Evolutionary agent pools** (population-based learning)
+- **Compaction strategies** (forgetting unsuccessful patterns)
+- **Selection strategies** (parent selection for reproduction)
+- **Reproduction with inheritance** (offspring inherit compacted reasoning)
+- **Generational evolution** (configurable frequency, population size)
 
-**Status**: Core reasoning pattern architecture complete. Ready for pipeline integration and multi-generation testing.
+**Status**: M2 complete - Full evolutionary learning cycle operational in PipelineV2. Agents evolve through inheritance, selection, and compaction.
 
 ---
 
