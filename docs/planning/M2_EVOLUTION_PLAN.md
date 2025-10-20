@@ -17,6 +17,28 @@ M2 implements **Step 8: EVOLVE** of the 8-step learning cycle:
 
 ---
 
+## LangGraph Integration
+
+**M2 uses a hybrid architecture:**
+
+### LangGraph Components (Workflow Orchestration)
+- **`_evolve_node()`** in PipelineV2 - LangGraph node that orchestrates Step 8 (EVOLVE)
+- **Multi-generation loops** - Conditional edges to run N generations
+- **`_should_continue_evolving()`** - Conditional edge for generation limits
+- **Pool-based agent selection** - Generation nodes select agents from pools
+
+### Python Utility Components (Pure Algorithms)
+- **CompactionStrategy** - Abstract base class with 4 implementations
+- **SelectionStrategy** - Abstract base class with 4 implementations
+- **ReproductionStrategy** - Abstract base class with 2 implementations
+- **AgentPool** - Data structure (called BY LangGraph nodes)
+
+**Key Design Principle**: LangGraph handles workflow orchestration, Python classes handle algorithms.
+
+See: `docs/brainstorming/2025-10-20-M2-LANGGRAPH-ARCHITECTURE.md` for complete architecture.
+
+---
+
 ## Architecture Components
 
 ### 1. Compaction Strategies (Feature: `m2-compaction`)

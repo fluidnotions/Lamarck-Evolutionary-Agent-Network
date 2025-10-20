@@ -266,6 +266,7 @@ All features merged → Update status to:
 
 ### Documentation:
 - **Master Plan**: `docs/planning/M2_EVOLUTION_PLAN.md`
+- **LangGraph Architecture**: `docs/brainstorming/2025-10-20-M2-LANGGRAPH-ARCHITECTURE.md`
 - **Worktree READMEs**: In each worktree root
 - **Migration Guide**: `docs/MIGRATION_GUIDE.md`
 - **Pipeline V2 Guide**: `docs/PIPELINE_V2_GUIDE.md`
