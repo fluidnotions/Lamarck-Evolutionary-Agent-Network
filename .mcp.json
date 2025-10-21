@@ -8,6 +8,14 @@
         "code-graph-mcp"
       ],
       "env": {}
+    },
+    "project-memory": {
+      "command": "python",
+      "args": ["-m", "mcp_memory_service.server"],
+      "env": {
+        "MEMORY_DB_PATH": "./memory/project_memory.db",
+        "PROJECT_NAME": "Lamarck-Evolutionary-Agent-Network"
+      }
     }
   }
 }
