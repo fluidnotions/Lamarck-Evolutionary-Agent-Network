@@ -149,7 +149,7 @@ def demo_pattern_review():
 
     hitl = HumanInTheLoop(
         enabled=True,
-        review_points=[ReviewPoint.PATTERN.value]
+        review_points=[ReviewPoint.PATTERNS.value]
     )
 
     sample_reasoning = """
