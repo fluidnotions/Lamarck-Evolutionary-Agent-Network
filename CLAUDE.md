@@ -2,6 +2,309 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MCP Tools Configuration
+
+This project uses two MCP servers for enhanced code analysis and knowledge management:
+- **code-graph-mcp**: AST-based code structure analysis
+- **project-memory**: Persistent knowledge graph storage
+
+### Code Graph MCP - Automatic Usage Rules
+
+**When to Use code-graph-mcp:**
+Claude MUST use code-graph-mcp tools for these query patterns:
+
+1. **Call Graph Queries**
+   - "what calls [function]" → Use `find_callers` tool
+   - "what does [function] call" → Use `find_callees` tool
+   - "show call graph for [feature]" → Use `analyze_codebase` + `find_callers` + `find_callees`
+   - "trace execution from [function]" → Use `find_callees` recursively
+
+2. **Code Structure Queries**
+   - "find [symbol/function/class]" → Use `find_definition` tool
+   - "where is [symbol] used" → Use `find_references` tool
+   - "show me all [type] in codebase" → Use `search_symbol` tool
+
+3. **Complexity Analysis**
+   - "complex functions" → Use `complexity_analysis` tool (threshold: 15)
+   - "functions with complexity > [N]" → Use `complexity_analysis` with specified threshold
+   - "code that needs refactoring" → Use `complexity_analysis` (threshold: 20)
+   - "hotspots" → Use `complexity_analysis` + `find_callers` for impact
+
+4. **Dependency Analysis**
+   - "dependencies" → Use `dependency_analysis` tool
+   - "circular dependencies" → Use `dependency_analysis` and filter for cycles
+   - "what imports [module]" → Use `find_references` at module level
+   - "module dependencies" → Use `dependency_analysis`
+
+5. **Project Overview**
+   - "project structure" → Use `analyze_codebase` + `project_statistics`
+   - "codebase statistics" → Use `project_statistics` tool
+   - "code metrics" → Use `project_statistics` + `complexity_analysis`
+
+**Tool Execution Workflow:**
+1. First use in session: Always call `analyze_codebase` to build/refresh the code graph
+2. For function-specific queries: Call specific tool (`find_callers`, `find_definition`, etc.)
+3. For complex analysis: Chain multiple tools (e.g., `find_callers` → `complexity_analysis`)
+4. Include file paths and line numbers in all responses
+
+**Response Format for Code Graph Queries:**
+Always structure responses with:
+- **Location**: `file.py:line_number`
+- **Context**: Surrounding code context if relevant
+- **Relationships**: What calls it / what it calls
+- **Metrics**: Complexity score if applicable
+- **Impact**: Number of callers/callees for change impact assessment
+
+**Examples:**
+
+User: "What calls the evolve function?"
+Claude Action:
+1. Call `analyze_codebase` (if not done in session)
+2. Call `find_callers("evolve")`
+3. Respond: "The `evolve()` function is called by:
+   - `population_manager.py:145` in `run_generation()`
+   - `evolution_loop.py:89` in `main_evolution_cycle()`
+   - `test_evolution.py:67` in `test_evolve_population()`"
+
+User: "Show me functions with complexity over 15"
+Claude Action:
+1. Call `complexity_analysis(threshold=15)`
+2. Sort by complexity descending
+3. Respond with formatted list including locations and scores
+
+### Project Memory MCP - Knowledge Management Rules
+
+**When to Use project-memory:**
+Claude MUST use project-memory tools for these patterns:
+
+1. **Storing Knowledge** (User explicitly asks to remember)
+   - "remember [fact]" → Use `create_entities` tool
+   - "store this" → Use `create_entities` + `add_observations`
+   - "save to memory" → Use `create_entities`
+   - After solving complex bugs → Prompt user: "Should I remember this solution?"
+   - After architectural decisions → Prompt user: "Should I store this decision?"
+
+2. **Retrieving Knowledge** (User asks about past context)
+   - "recall [topic]" → Use `search_nodes` tool
+   - "what do you know about [topic]" → Use `search_nodes` tool
+   - "do you remember [topic]" → Use `search_nodes` tool
+   - "why did we [decision]" → Use `search_nodes` tool
+   - Before major refactoring → Automatically call `search_nodes` to check for relevant decisions
+
+3. **Exploring Knowledge** (User wants to browse)
+   - "show knowledge graph" → Use `read_graph` tool
+   - "what entities exist" → Use `open_nodes` tool
+   - "what's related to [topic]" → Use `read_graph` filtered by entity
+
+4. **Updating Knowledge** (User provides new context)
+   - "add observation about [entity]" → Use `add_observations` tool
+   - "update [entity]" → Use `add_observations` tool
+   - "link [A] and [B]" → Use `create_relations` tool
+
+**What to Store in Memory:**
+
+✅ DO Store:
+- Architectural decisions and their rationale
+- Performance optimization strategies and measurements
+- Bug fixes with root cause analysis
+- Complex algorithm explanations
+- Integration patterns and gotchas
+- Domain-specific knowledge (evolutionary algorithms, agent behavior, etc.)
+- Testing strategies for specific features
+- Design tradeoffs and why alternatives were rejected
+- Non-obvious code relationships
+- Historical context for "why it's done this way"
+
+❌ DON'T Store:
+- Trivial facts easily found in code
+- Temporary implementation details
+- Simple variable names or values
+- Current session debugging notes (use `/note` command instead)
+- Code snippets (store in files, not memory)
+- Information that will quickly become outdated
+
+**Entity Types to Use:**
+- `architecture` - Design decisions, system structure
+- `solution` - Bug fixes, problem solutions
+- `pattern` - Reusable design patterns, best practices
+- `domain_knowledge` - Project-specific concepts (evolution, agents, fitness, etc.)
+- `optimization` - Performance improvements
+- `integration` - How components work together
+- `constraint` - Known limitations or requirements
+
+**Memory Storage Format:**
+
+When storing with `create_entities`:
+```json
+{
+  "name": "Clear, concise title (under 50 chars)",
+  "entityType": "architecture|solution|pattern|domain_knowledge|optimization|integration|constraint",
+  "observations": [
+    "Primary observation: [the main fact/decision]",
+    "Rationale: [why this decision was made]",
+    "Context: [when/where this applies]",
+    "Impact: [what this affects]",
+    "Stored: [date]"
+  ]
+}
+```
+
+When creating relationships with `create_relations`:
+```json
+{
+  "from": "entity_id_1",
+  "to": "entity_id_2", 
+  "relationType": "depends_on|implements|solves|relates_to|conflicts_with"
+}
+```
+
+**Examples:**
+
+User: "Remember: we use async/await for all agent communication"
+Claude Action:
+1. Call `create_entities`:
+```json
+   {
+     "name": "Async Agent Communication Pattern",
+     "entityType": "architecture",
+     "observations": [
+       "All agent-to-agent communication uses async/await",
+       "Rationale: Prevents blocking during long-running fitness evaluations",
+       "Impact: Allows concurrent evolution of multiple populations",
+       "Critical for scaling beyond 100 agents",
+       "See: agent_network/communication.py"
+     ]
+   }
+```
+2. Call `create_relations` to link to `agent_network` module
+3. Respond: "✅ Stored architectural decision: Async Agent Communication Pattern"
+
+User: "What do you know about fitness evaluation?"
+Claude Action:
+1. Call `search_nodes("fitness evaluation")`
+2. Retrieve top 3-5 relevant memories
+3. Present formatted results with:
+   - Entity names and types
+   - Stored observations
+   - Related entities/code locations
+   - Relevance scores
+
+User: "Why did we implement copy-on-write for fitness?"
+Claude Action:
+1. Call `search_nodes("copy-on-write fitness")`
+2. If found, present the stored rationale
+3. If not found: "No memory found. Should I search the code with code-graph-mcp?"
+
+### Combined Workflow - Using Both Tools Together
+
+For complex development tasks, use both MCP tools strategically:
+
+**Before Refactoring:**
+1. `code-graph-mcp`: Analyze current structure
+```
+   "What calls the fitness_evaluation function?" 
+   "Show complexity analysis for fitness module"
+```
+2. `project-memory`: Recall design decisions
+```
+   "What do you know about fitness evaluation design?"
+```
+3. Make informed decision with full context
+
+**After Solving a Complex Bug:**
+1. Document the solution in memory:
+```
+   /remember "Race condition in fitness calculation: Multiple agents were 
+   accessing shared cache concurrently. Fixed with copy-on-write semantics 
+   in fitness.py:145-167. Root cause: Missing synchronization in CacheManager."
+```
+2. Use code-graph to verify the fix doesn't break callers:
+```
+   "What functions call CacheManager methods?"
+```
+
+**Starting Work on New Feature:**
+1. Check for existing knowledge:
+```
+   "What do you know about [feature area]?"
+```
+2. Analyze related code:
+```
+   "Show me the structure of the [module] module"
+   "Find functions related to [feature]"
+```
+3. Plan implementation with full context
+
+### Proactive Tool Usage
+
+Claude should proactively suggest using these tools:
+
+**Suggest code-graph when:**
+- User mentions refactoring without analyzing impact
+- User asks about code structure in vague terms
+- Discussing changes to functions with many callers
+- Need to understand cascade effects of changes
+
+**Suggest memory when:**
+- User makes an important architectural decision (offer to store it)
+- User solves a non-trivial bug (offer to document solution)
+- User asks "why" questions that might have historical context
+- Before major refactoring (check for documented constraints)
+
+**Example proactive responses:**
+
+User: "I'm going to refactor the evolve function"
+Claude: "Let me first analyze its impact with code-graph:
+1. What calls evolve() [using find_callers]
+2. Complexity analysis [using complexity_analysis]
+3. Check for documented design decisions [using memory search_nodes]
+
+Then we can plan the refactoring safely."
+
+User: "I fixed the race condition by adding locks"
+Claude: "Great! That was a tricky bug. Would you like me to store this solution 
+in project memory so we remember:
+- What the bug was
+- Root cause
+- How it was fixed
+- Where to look if similar issues appear?"
+
+### Error Handling
+
+**If code-graph tools fail:**
+1. Check if `analyze_codebase` has been run
+2. If not, run it automatically: "Building code graph first..."
+3. If it fails, fall back to manual code reading and explain: "Code graph unavailable, analyzing files directly"
+
+**If memory tools fail:**
+1. Check database connection (MEMORY_DB_PATH)
+2. Provide helpful error message
+3. Offer alternative: "Can't access memory. Should I use /note to document this instead?"
+
+**If tools return no results:**
+1. Suggest alternative search terms
+2. Offer to search with broader criteria
+3. For code-graph: "Function not found. Did you mean: [suggestions]?"
+4. For memory: "No memories found. Should I search the code instead?"
+
+### Performance Considerations
+
+- Code graph analysis may take 10-30 seconds for large projects
+- Memory searches are fast (<1 second typically)
+- Cache code graph results within a session
+- Rebuild code graph after major changes or at session start
+- Don't rebuild unnecessarily - check if recent analysis exists
+
+### Integration with Existing Commands
+
+These MCP tools enhance existing commands:
+
+- `/work` → Use code-graph to understand dependencies before implementing
+- `/issue` → Use memory to recall related architectural decisions
+- `/explore` → Use both tools to gather context
+- `/note` → For session notes; use memory for permanent knowledge
+- `/kanban` → Use code-graph to analyze impact of completed work
+
 ## Project Overview
 
 **LEAN (Lamarck Evolutionary Agent Network)** is a research prototype testing **Lamarckian evolution** for AI agents through:
@@ -12,6 +315,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **YAML-based experiment configuration**
 
 **Core Research Question**: Can agents improve by inheriting their parents' reasoning patterns rather than through prompt engineering?
+
 
 ## V2 Architecture (Current)
 

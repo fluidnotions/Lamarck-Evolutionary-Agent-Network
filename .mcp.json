@@ -7,14 +7,23 @@
         "run",
         "code-graph-mcp"
       ],
-      "env": {}
+      "env": {
+        "CODE_GRAPH_MCP_LOG_LEVEL": "INFO",
+        "CODE_GRAPH_MCP_CACHE_SIZE": "500000",
+        "CODE_GRAPH_MCP_MAX_FILES": "10000",
+        "CODE_GRAPH_MCP_FILE_WATCHER": "true",
+        "CODE_GRAPH_MCP_DEBOUNCE_DELAY": "2.0"
+      }
     },
     "project-memory": {
+      "type": "stdio",
       "command": "python",
       "args": ["-m", "mcp_memory_service.server"],
       "env": {
         "MEMORY_DB_PATH": "./memory/project_memory.db",
-        "PROJECT_NAME": "Lamarck-Evolutionary-Agent-Network"
+        "PROJECT_NAME": "Lamarck-Evolutionary-Agent-Network",
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "LOG_LEVEL": "INFO"
       }
     }
   }
