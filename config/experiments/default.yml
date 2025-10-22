@@ -6,8 +6,8 @@ experiment:
   description: "Testing transfer learning with grouped AI-related topics"
 
   # Evolution settings
-  population_size: 3  # Agents per role
-  evolution_frequency: 5  # Evolve every N generations
+  population_size: 6  # Agents per role
+  evolution_frequency: 3  # Evolve every N generations
   total_generations: 20
 
   # Data directories
@@ -126,8 +126,8 @@ memory:
   max_knowledge_retrieve: 3
   max_reasoning_retrieve: 5
   inherited_reasoning_size: 100
-  score_threshold: 9.0
-  shared_rag_min_score: 8.0
+  score_threshold: 6.5
+  shared_rag_min_score: 7.0
 
 # Pipeline Feature Flags
 pipeline:
@@ -137,7 +137,7 @@ pipeline:
 
 # Research settings for Tavily integration
 research:
-  enabled: true
+  enabled: false
   provider: "tavily"
   max_results: 5
   search_depth: "advanced"  # basic or advanced
@@ -149,6 +149,7 @@ evolution:
   selection_strategy: "tournament"
   compaction_strategy: "hybrid"
   reproduction_strategy: "sexual"
+  mutation_rate: 0.1
 
 # Human-in-the-Loop Configuration
 hitl:
@@ -159,4 +160,7 @@ hitl:
 
 # Visualization Configuration
 visualization:
-  enabled: true  
+  enabled: false
+
+logging:
+  level: INFO
