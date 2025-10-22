@@ -7,21 +7,29 @@ This version uses:
 - SharedRAG for domain knowledge
 - ContextManager for reasoning trace distribution
 - 8-step learning cycle
+- YAML-based configuration for experiments and prompts
+- Optional Tavily research integration
 
-Run: python main_v2.py
+Run: python main_v2.py [--config CONFIG_NAME]
 """
 
 import asyncio
 import os
+import argparse
 from dotenv import load_dotenv
 
 from src.lean.pipeline_v2 import PipelineV2
+from src.lean.config_loader import load_config
 
 load_dotenv()
 
 
-async def main():
-    """Run V2 pipeline with reasoning patterns."""
+async def main(config_name: str = "default"):
+    """Run V2 pipeline with reasoning patterns.
+
+    Args:
+        config_name: Name of the experiment config file (without .yml)
+    """
 
     print("\n" + "="*70)
     print("  LEAN V2: Lamarck Evolutionary Agent Network")
@@ -34,66 +42,62 @@ async def main():
         print("Please set your API key in the .env file")
         return
 
+    # Load configuration from YAML
+    print(f"Loading experiment configuration: {config_name}")
+    try:
+        exp_config, agent_prompts = load_config(config_name)
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+        print("Available configs should be in ./config/experiments/")
+        return
+    except Exception as e:
+        print(f"❌ Error loading configuration: {e}")
+        return
+
+    print(f"✅ Loaded: {exp_config.name}")
+    print(f"   {exp_config.description}")
+    print()
+
     # Initialize pipeline with M2 evolution
     print("Initializing evolutionary pipeline...")
 
-    POPULATION_SIZE = 3  # Agents per role
-    EVOLUTION_FREQUENCY = 5  # Evolve every N generations
-    TOTAL_GENERATIONS = 20  # Total generations to run
-
     pipeline = PipelineV2(
-        reasoning_dir="./data/reasoning",
-        shared_rag_dir="./data/shared_rag",
-        domain="General",
-        population_size=POPULATION_SIZE,
-        evolution_frequency=EVOLUTION_FREQUENCY
+        reasoning_dir=exp_config.reasoning_dir,
+        shared_rag_dir=exp_config.shared_rag_dir,
+        domain=exp_config.domain,
+        population_size=exp_config.population_size,
+        evolution_frequency=exp_config.evolution_frequency
     )
 
+    # Pass research config to pipeline (will be used when creating agents)
+    pipeline.research_config = exp_config.research_config
+
     print("✅ Pipeline V2 initialized with M2 Evolution")
-    print(f"  - Population: {POPULATION_SIZE} agents per role")
-    print(f"  - Evolution frequency: every {EVOLUTION_FREQUENCY} generations")
-    print(f"  - Total generations: {TOTAL_GENERATIONS}")
+    print(f"  - Population: {exp_config.population_size} agents per role")
+    print(f"  - Evolution frequency: every {exp_config.evolution_frequency} generations")
+    print(f"  - Total generations: {exp_config.total_generations}")
     print("  - Using reasoning patterns + shared RAG")
     print("  - Full 8-step learning cycle with inheritance")
+
+    # Show research config
+    if exp_config.research_config.get('enabled'):
+        api_key_status = "✅" if os.getenv('TAVILY_API_KEY') else "⚠️ (no API key)"
+        print(f"  - Tavily research: {api_key_status}")
+        print(f"    Max results: {exp_config.research_config.get('max_results', 5)}")
+        print(f"    Search depth: {exp_config.research_config.get('search_depth', 'advanced')}")
+    else:
+        print("  - Tavily research: disabled")
     print()
 
-    # Define topics - pairs of similar topics to test transfer learning
-    # Evolution happens at gen 5, 10, 15, 20
-    # Similar topics test if inherited reasoning helps on related content
-    topics = [
-        # Block 1: AI fundamentals (gens 1-4, before first evolution)
-        "The Future of Artificial Intelligence",
-        "Machine Learning Fundamentals",
-        "Neural Networks Explained",
-        "Deep Learning Basics",
-
-        # Block 2: After first evolution (gen 5)
-        "AI in Healthcare Applications",  # Similar to previous
-        "Medical Diagnosis with Machine Learning",
-        "Neural Networks for Patient Care",
-        "Deep Learning in Medical Imaging",
-        "AI-Powered Drug Discovery",
-
-        # Block 3: After second evolution (gen 10)
-        "The Ethics of Artificial Intelligence",
-        "AI Safety and Alignment",
-        "Machine Learning Bias and Fairness",
-        "Responsible AI Development",
-        "AI Governance Frameworks",
-
-        # Block 4: After third evolution (gen 15)
-        "Climate Change and AI Solutions",
-        "Machine Learning for Environmental Science",
-        "Neural Networks Predicting Weather",
-        "Deep Learning for Sustainability",
-        "AI-Driven Climate Modeling",
-    ]
+    # Get topics from configuration
+    topics = exp_config.get_all_topics()
+    TOTAL_GENERATIONS = exp_config.total_generations
 
     # Limit to requested generations
     topics = topics[:TOTAL_GENERATIONS]
 
     print(f"Running {len(topics)} generations with evolutionary learning...")
-    print(f"Evolution events at generations: {', '.join(str(i) for i in range(EVOLUTION_FREQUENCY, TOTAL_GENERATIONS + 1, EVOLUTION_FREQUENCY))}\n")
+    print(f"Evolution events at generations: {', '.join(str(i) for i in range(exp_config.evolution_frequency, TOTAL_GENERATIONS + 1, exp_config.evolution_frequency))}\n")
 
     results = []
 
@@ -161,6 +165,7 @@ async def main():
     print("\nEvolutionary Learning Analysis:")
 
     # Compare performance before and after each evolution
+    EVOLUTION_FREQUENCY = exp_config.evolution_frequency
     evolution_points = list(range(EVOLUTION_FREQUENCY, TOTAL_GENERATIONS + 1, EVOLUTION_FREQUENCY))
 
     for i, evo_gen in enumerate(evolution_points):
@@ -214,4 +219,13 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Run LEAN V2 evolutionary experiment")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="default",
+        help="Name of experiment config file (without .yml extension)"
+    )
+    args = parser.parse_args()
+
+    asyncio.run(main(args.config))
