@@ -206,7 +206,7 @@ CONCLUSION CONTEXT:
         response_text = response.content
 
         # Parse response
-        thinking, output, _ = self._parse_response(response_text, prompt)
+        thinking, output = self._parse_response(response_text)
 
         # Extract section-specific contexts
         contexts = self._extract_agent_contexts(output)
@@ -355,7 +355,7 @@ REVISION_NEEDED: [YES/NO]
         response_text = response.content
 
         # Parse response
-        thinking, output, _ = self._parse_response(response_text, prompt)
+        thinking, output = self._parse_response(response_text)
 
         # Extract scores and feedback
         evaluation = self._parse_critique(output)

@@ -49,7 +49,6 @@ class Pipeline:
         domain: str = "General",
         population_size: int = 5,
         evolution_frequency: int = 10,
-        mutation_rate: float = 0.0,
         enable_research: bool = True,
         enable_specialists: bool = True,
         enable_revision: bool = True,
@@ -74,7 +73,6 @@ class Pipeline:
         self.domain = domain
         self.generation_counter = 0
         self.evolution_frequency = evolution_frequency
-        self.mutation_rate = mutation_rate
         self.enable_research = enable_research
         self.enable_specialists = enable_specialists
         self.enable_revision = enable_revision
@@ -120,7 +118,7 @@ class Pipeline:
             self.specialists = None
 
         # Initialize reproduction strategy
-        self.reproduction_strategy = SexualReproduction(mutation_rate=mutation_rate)
+        self.reproduction_strategy = SexualReproduction()
 
         # Initialize context manager
         self.context_manager = ContextManager(
