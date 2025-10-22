@@ -6,7 +6,7 @@ This implements the 8-step reasoning cycle from the architecture refactor.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from datetime import datetime
@@ -58,7 +58,8 @@ class BaseAgent(ABC):
         reasoning_memory: ReasoningMemory,
         shared_rag: SharedRAG,
         parent_ids: Optional[List[str]] = None,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        llm_config: Optional[Dict[str, Any]] = None
     ):
         """Initialize agent with reasoning pattern memory.
 
@@ -76,6 +77,7 @@ class BaseAgent(ABC):
         self.shared_rag = shared_rag
         self.parent_ids = parent_ids or []
         self.system_prompt = system_prompt  # Store YAML prompt
+        self.llm_config = llm_config or {}
 
         # Initialize LLM based on provider
         self.llm = self._initialize_llm()
@@ -95,18 +97,18 @@ class BaseAgent(ABC):
         Returns:
             Initialized LLM client (ChatAnthropic or ChatOpenAI)
         """
-        provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-        temperature = float(os.getenv("BASE_TEMPERATURE", "0.7"))
+        provider = (self.llm_config.get("provider") or "anthropic").lower()
+        temperature = float(self.llm_config.get("base_temperature", 0.7))
 
         if provider == "openai":
-            model_name = os.getenv("MODEL_NAME", "gpt-4-turbo-preview")
+            model_name = self.llm_config.get("model_name", "gpt-4-turbo-preview")
             return ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
                 api_key=os.getenv("OPENAI_API_KEY")
             )
         elif provider == "anthropic":
-            model_name = os.getenv("MODEL_NAME", "claude-3-5-sonnet-20241022")
+            model_name = self.llm_config.get("model_name", "claude-3-5-sonnet-20241022")
             return ChatAnthropic(
                 model=model_name,
                 temperature=temperature,
@@ -491,7 +493,9 @@ def create_agents(
     reasoning_dir: str = "./data/reasoning",
     shared_rag_dir: str = "./data/shared_rag",
     agent_ids: Optional[Dict[str, str]] = None,
-    agent_prompts: Optional[Dict[str, str]] = None
+    agent_prompts: Optional[Dict[str, str]] = None,
+    model_config: Optional[Dict[str, Any]] = None,
+    memory_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, BaseAgent]:
     """Create agents with reasoning pattern architecture.
 
@@ -516,7 +520,15 @@ def create_agents(
     from lean.shared_rag import SharedRAG
 
     # Create single SharedRAG instance (shared by ALL agents)
-    shared_rag = SharedRAG(persist_directory=shared_rag_dir)
+    model_config = model_config or {}
+    memory_config = memory_config or {}
+
+    shared_rag = SharedRAG(
+        persist_directory=shared_rag_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_knowledge_retrieve'),
+        min_quality_score=memory_config.get('shared_rag_min_score'),
+    )
 
     # Default agent IDs
     if agent_ids is None:
@@ -536,42 +548,51 @@ def create_agents(
     intro_collection = generate_reasoning_collection_name('intro', agent_ids['intro'])
     intro_memory = ReasoningMemory(
         collection_name=intro_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     agents['intro'] = IntroAgent(
         role='intro',
         agent_id=f"intro_{agent_ids['intro']}",
         reasoning_memory=intro_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('intro')
+        system_prompt=agent_prompts.get('intro'),
+        llm_config=model_config
     )
 
     # Create body agent
     body_collection = generate_reasoning_collection_name('body', agent_ids['body'])
     body_memory = ReasoningMemory(
         collection_name=body_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     agents['body'] = BodyAgent(
         role='body',
         agent_id=f"body_{agent_ids['body']}",
         reasoning_memory=body_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('body')
+        system_prompt=agent_prompts.get('body'),
+        llm_config=model_config
     )
 
     # Create conclusion agent
     conclusion_collection = generate_reasoning_collection_name('conclusion', agent_ids['conclusion'])
     conclusion_memory = ReasoningMemory(
         collection_name=conclusion_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     agents['conclusion'] = ConclusionAgent(
         role='conclusion',
         agent_id=f"conclusion_{agent_ids['conclusion']}",
         reasoning_memory=conclusion_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('conclusion')
+        system_prompt=agent_prompts.get('conclusion'),
+        llm_config=model_config
     )
 
     return agents

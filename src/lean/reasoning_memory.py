@@ -59,6 +59,7 @@ class ReasoningMemory:
         inherited_reasoning: Optional[List[Dict]] = None,
         chroma_client: Optional[chromadb.Client] = None,
         embedding_model: Optional[str] = None,
+        max_retrieve: Optional[int] = None,
     ):
         """Initialize reasoning memory manager.
 
@@ -92,11 +93,11 @@ class ReasoningMemory:
         )
 
         # Initialize embedding model
-        model_name = embedding_model or os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        model_name = embedding_model or "all-MiniLM-L6-v2"
         self.embedder = SentenceTransformer(model_name)
 
         # Configuration
-        self.max_retrieve = int(os.getenv("MAX_REASONING_RETRIEVE", "5"))
+        self.max_retrieve = max_retrieve if max_retrieve is not None else 5
 
         # Track retrieval counts
         self.retrieval_counts = {}

@@ -41,6 +41,8 @@ class SharedRAG:
         persist_directory: str = "./data/shared_rag",
         chroma_client: Optional[chromadb.Client] = None,
         embedding_model: Optional[str] = None,
+        max_retrieve: Optional[int] = None,
+        min_quality_score: Optional[float] = None,
     ):
         """Initialize shared RAG manager.
 
@@ -69,12 +71,14 @@ class SharedRAG:
         )
 
         # Initialize embedding model
-        model_name = embedding_model or os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        model_name = embedding_model or "all-MiniLM-L6-v2"
         self.embedder = SentenceTransformer(model_name)
 
         # Configuration
-        self.max_retrieve = int(os.getenv("MAX_KNOWLEDGE_RETRIEVE", "3"))
-        self.min_quality_score = float(os.getenv("SHARED_RAG_MIN_SCORE", "8.0"))
+        self.max_retrieve = max_retrieve if max_retrieve is not None else 3
+        self.min_quality_score = (
+            float(min_quality_score) if min_quality_score is not None else 8.0
+        )
 
     def store(
         self,
