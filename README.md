@@ -34,20 +34,21 @@ What if agents evolved their cognitive strategies through inheritance rather tha
 This system cleanly separates three concerns that current approaches conflate:
 
 **1. Fixed Interface Layer (Prompts)**
-```python
-role_prompts = {
-    'intro': "You write introductions.",
-    'body': "You write body paragraphs.",
-    'conclusion': "You write conclusions."
-}
+```yaml
+# config/prompts/agents.yml
+intro:
+  system_prompt: |
+    You are an Introduction Agent in the LEAN evolutionary system.
+    Your role is to craft compelling introductions that hook readers.
 ```
 - Never changes, never mutates
 - Provides stable API for the system
 - Pure role definition
+- Loaded from YAML configuration
 
 **2. Shared Knowledge Layer (RAG)**
 - Domain facts and content
-- Reference materials  
+- Reference materials
 - Historical outputs
 - Available to all agents equally
 - Standard semantic retrieval
@@ -63,7 +64,29 @@ role_prompts = {
 
 ---
 
-## The Evolutionary Architecture
+## The Hierarchical Architecture
+
+### Three-Layer Ensemble System
+
+**Layer 1: Coordinator**
+- **CoordinatorAgent** orchestrates the entire workflow
+- Researches topics using Tavily API (optional)
+- Synthesizes research into context for content agents
+- Aggregates outputs and critiques quality
+- Requests revisions if quality is below threshold
+
+**Layer 2: Content Agents**
+- **IntroAgent** - Writes introductions
+- **BodyAgent** - Writes main content
+- **ConclusionAgent** - Writes conclusions
+- Organized in evolutionary **AgentPools** (population-based evolution)
+- Each agent has ReasoningMemory (cognitive patterns) and SharedRAG access
+
+**Layer 3: Specialist Agents**
+- **ResearcherAgent** - Deep research and evidence validation
+- **FactCheckerAgent** - Claim verification and accuracy checking
+- **StylistAgent** - Clarity and readability enhancement
+- Invoked by content agents when needed
 
 ### How Reasoning Inheritance Works
 
@@ -79,121 +102,105 @@ Each agent maintains two types of cognitive patterns:
 - Reasoning traces with scores
 - Added to inheritance pool when reproducing
 
-**Memory structure:**
+**Memory structure using `<think>/<final>` tags:**
 ```python
-class AgentMemory:
-    def plan(self, task):
-        # Retrieve similar successful planning sequences
-        similar_plans = vector_db.search(
-            query=f"task: {task}",
-            filter={"score": {">": 7.0}},
-            search_field="planning_steps"  # Search on reasoning, not content
-        )
-        
-        # Synthesize new plan from successful patterns
-        return self.merge_planning_patterns(similar_plans)
-    
-    def execute(self, plan):
-        # Execute the evolved planning sequence
-        result = self.follow_steps(plan)
-        
-        # Store the planning pattern + score (not the content)
-        self.store_memory(
-            planning_steps=plan,
-            execution_trace=self.get_execution_details(),
-            score=evaluate(result)
-        )
+# Agent generates structured output
+response = """
+<think>
+I should start with a hook about recent AI breakthroughs.
+Then establish why this matters to readers.
+Finally preview the three main points I'll cover.
+</think>
+
+<final>
+Did you know that artificial intelligence is already powering...
+</final>
+"""
+
+# <think> content is extracted and stored
+reasoning_pattern = {
+    "thinking": "I should start with a hook...",
+    "score": 8.5,
+    "generation": 5,
+    "role": "intro"
+}
+
+# Offspring inherit compacted patterns from parents
 ```
 
 ### What Gets Stored: Cognitive Strategies, Not Content
 
-Memories are **reasoning patterns**, not domain knowledge:
-
-```python
-{
-    "planning_steps": [
-        "First establish context with historical example",
-        "Then introduce 3-5 supporting statistics", 
-        "Finally pose thought-provoking question"
-    ],
-    "execution_trace": "Used WWII example, included 3 economic stats, asked 'What if?'",
-    "context_type": "technical_audience",
-    "score": 8.5,
-    "retrieval_count": 12,
-    "generation": 5
-}
-```
-
 **Critical distinction (storage has two paths):**
-- **Individual memory** (per-agent): ALL reasoning patterns stored (no threshold) → periodically compacted → best 20-30% inherited by offspring
+- **Individual memory** (per-agent): ALL reasoning patterns stored (no threshold) → periodically compacted → best patterns inherited by offspring
 - **Shared RAG** (global): ONLY high-quality content (score ≥8.0) stored → available to all agents as domain knowledge
 
-This separation enables Lamarckian evolution: agents inherit their parents' **best** cognitive strategies (after forgetting unsuccessful ones) while sharing domain facts
+This separation enables Lamarckian evolution: agents inherit their parents' **best** cognitive strategies (after forgetting unsuccessful ones) while sharing domain facts.
 
 ### Evolutionary Operators
 
 **Selection** (choose parents):
-- ε-greedy, tournament, or fitness-weighted
+- Tournament selection (currently used)
+- Rank-based selection
+- Fitness-proportionate selection
 - Based on how well their reasoning patterns perform
-- High-scoring cognitive strategies reproduce more
 
 **Reasoning Pattern Compaction** (create offspring):
 ```python
-def reproduce(parent1, parent2):
+def sexual_reproduction(parent1, parent2):
     # Merge both parents' reasoning patterns
-    combined_patterns = parent1.reasoning_patterns + parent2.reasoning_patterns
-    
-    # Compact to manageable size using strategy
-    inherited_reasoning = compact_reasoning(combined_patterns, max_size=100)
-    
-    # Child gets compacted cognitive strategies, same prompt as parents
+    p1_patterns = compact(parent1.reasoning_memory.patterns)
+    p2_patterns = compact(parent2.reasoning_memory.patterns)
+
+    # Child gets compacted cognitive strategies
     child = Agent(
-        prompt=role_prompts[parent1.role],  # Fixed
-        inherited_reasoning=inherited_reasoning,  # Evolved
+        role=parent1.role,
+        system_prompt=parent1.system_prompt,  # Fixed (from YAML)
+        inherited_reasoning=p1_patterns + p2_patterns,  # Evolved
         shared_rag=global_knowledge_base  # Shared
     )
     return child
 ```
 
 **Population Dynamics:**
-- 5 agents per role (15 total)
-- Evolution every 10 generations
-- Add agents when reasoning diversity drops
-- Remove agents when fitness < 6.0 (after 20+ tasks)
+- Configurable agents per role (default: 3)
+- Evolution frequency configurable (default: every 5 generations)
+- AgentPools manage populations per role
 
-### The Learning Cycle
+### The Learning Cycle (Hierarchical)
 
-Each agent, each generation:
+Each generation follows this workflow:
 
-1. **Start with inheritance**: Already has proven reasoning patterns from parents
-2. **Plan approach**: Query inherited + personal reasoning patterns for similar tasks
-3. **Retrieve knowledge**: Get relevant facts from shared RAG (domain content)
-4. **Receive context**: Get reasoning traces from other agents (40% hierarchy, 30% high-performers, 20% random, 10% peer)
-5. **Generate**: Execute plan using fixed prompt + evolved reasoning + retrieved knowledge
-6. **Evaluate**: Get scored by LLM on quality factors
-7. **Store** (two paths):
-   - Reasoning pattern → individual memory (ALL patterns, no threshold)
-   - Output content → shared RAG (ONLY if score ≥8.0)
-8. **Evolve** (every N generations, M2 implementation):
-   - **Compaction**: Forget unsuccessful patterns (keep top 20-30%)
-   - **Selection**: Best reasoners chosen as parents
-   - **Reproduction**: Child inherits compacted reasoning patterns
-   - **Population management**: Maintain diversity
+1. **[COORDINATOR] Research** - Coordinator researches topic via Tavily (if enabled)
+2. **[COORDINATOR] Distribute** - Coordinator synthesizes context for content agents
+3. **[ENSEMBLE] Generate** - Content agents generate sections:
+   - **Retrieve reasoning patterns**: Query inherited + personal patterns
+   - **Retrieve knowledge**: Get facts from shared RAG
+   - **Invoke specialists**: Call researcher/fact-checker/stylist if needed
+   - **Generate with `<think>/<final>` tags**: Externalize reasoning
+4. **[COORDINATOR] Aggregate** - Coordinator combines all outputs
+5. **[COORDINATOR] Critique** - Coordinator scores quality
+6. **[REVISION LOOP]** - If quality < threshold, request revisions (configurable)
+7. **[EVALUATION]** - ContentEvaluator scores each section (0-10)
+8. **[STORAGE]** - Two paths:
+   - Reasoning patterns (`<think>` content) → individual memory
+   - Output content → shared RAG (if score ≥ 8.0)
+9. **[EVOLUTION]** - Every N generations:
+   - **Compaction**: Forget unsuccessful patterns
+   - **Selection**: Best reasoners chosen as parents (tournament/rank/fitness-weighted)
+   - **Reproduction**: Offspring inherit compacted reasoning
+   - **Pool replacement**: New generation replaces old
 
-**Key insight:** Adding a successful planning step from memory is functionally equivalent to editing a prompt to include that step, but it happens dynamically through retrieval rather than manual engineering.
+**Key insight:** The ensemble coordinator orchestrates multiple content agents, each with their own reasoning patterns, creating a collaborative evolutionary system.
 
 ---
 
 ## Memory Compaction Strategies
 
-Instead of compacting content, we compact **reasoning patterns**. Each strategy encapsulates different approaches to cognitive inheritance:
-
-### Three Baseline Strategies (A/B Testing)
+Three strategies for cognitive inheritance:
 
 #### Strategy A: Score-Weighted Selection
 ```python
 def compact_reasoning(combined, max_size=100):
-    # Keep reasoning patterns that led to highest scores
     return sorted(combined, key=lambda m: m.score)[-max_size:]
 ```
 - **Hypothesis**: Quality over quantity—only pass on proven thinking patterns
@@ -201,30 +208,20 @@ def compact_reasoning(combined, max_size=100):
 #### Strategy B: Diversity Preservation
 ```python
 def compact_reasoning(combined, max_size=100):
-    # Keep diverse reasoning approaches for different problem types
     clusters = cluster_by_pattern_structure(combined)
     return [cluster.best_pattern for cluster in clusters][:max_size]
 ```
 - **Hypothesis**: Coverage beats optimization—need different cognitive strategies
 
-#### Strategy C: Usage-Based Retention
+#### Strategy C: Hybrid (Currently Used)
 ```python
 def compact_reasoning(combined, max_size=100):
-    # Keep reasoning patterns that were frequently retrieved and useful
+    # Combine score and usage metrics
     return sorted(combined,
-                 key=lambda m: m.retrieval_count * m.score
+                 key=lambda m: m.score * m.retrieval_count
                 )[-max_size:]
 ```
 - **Hypothesis**: Field-tested thinking beats theoretical quality
-
-### What We're Measuring
-
-Each strategy tracks:
-- **Reasoning improvement**: How cognitive strategies evolve
-- **Pattern diversity**: Variety of problem-solving approaches
-- **Efficiency**: Quality gain per reasoning step
-- **Specialization**: Role-specific cognitive patterns
-- **Innovation rate**: Novel high-scoring reasoning sequences
 
 ---
 
@@ -257,7 +254,7 @@ In this system:
 
 **Critical decision:** Keep three layers completely separate:
 
-1. **Prompts (Interface)**: What agents should do—never changes
+1. **Prompts (Interface)**: What agents should do—never changes (YAML)
 2. **RAG (Knowledge)**: What agents know—shared by all
 3. **Reasoning (Cognition)**: How agents think—evolves through inheritance
 
@@ -278,20 +275,14 @@ For AI agents, Lamarckian is superior because:
 ```python
 # Generation 1 agent discovers through experience:
 personal_reasoning = {
-    "pattern": ["establish_context", "add_statistics", "pose_question"],
+    "thinking": "establish_context, add_statistics, pose_question",
     "score": 7.8
 }
 
-# Generation 2 inherits this as prior reasoning:
-inherited_reasoning = {
-    "pattern": ["establish_context", "add_statistics", "pose_question"],
-    "score": 7.8,
-    "generation": 1
-}
-
+# Generation 2 inherits this as prior reasoning
 # Generation 2 refines it:
 personal_reasoning = {
-    "pattern": ["establish_context", "add_statistics", "contrast_viewpoint", "pose_question"],
+    "thinking": "establish_context, add_statistics, contrast_viewpoint, pose_question",
     "score": 8.6
 }
 
@@ -304,7 +295,7 @@ Cognitive strategies accumulate. Each generation reasons better.
 
 ## What Success Looks Like
 
-### Measurable Outcomes (100 Generations)
+### Measurable Outcomes
 
 - **Reasoning improvement**: Average scores increase through better cognitive strategies
 - **Emergent specialization**: Roles develop distinct reasoning patterns
@@ -316,56 +307,9 @@ Cognitive strategies accumulate. Each generation reasons better.
 
 - **Reasoning lineages**: Successful cognitive patterns propagate across generations
 - **Pattern refinement**: Later generations have more sophisticated reasoning
-- **Cognitive accumulation**: 50-100 inherited + 50-150 personal patterns per agent
+- **Cognitive accumulation**: Inherited + personal patterns per agent
 - **Cross-pollination**: Diverse reasoning prevents cognitive monoculture
 - **Role specialization**: Intro agents think differently than Body agents
-
-### What Failure Looks Like
-
-- **No reasoning improvement**: Cognitive patterns don't evolve
-- **Pattern convergence**: All agents think the same way
-- **Noise accumulation**: Inherited patterns add confusion instead of clarity
-- **Lost diversity**: Selection pressure eliminates alternative reasoning
-- **No specialization**: Roles don't develop distinct cognitive strategies
-
----
-
-## The Experiment
-
-### Task: Blog Post Generation
-
-Three agent roles working sequentially:
-- **IntroAgent**: Writes introductions (evolving reasoning for hooks)
-- **BodyAgent**: Writes body sections (evolving reasoning for explanation)
-- **ConclusionAgent**: Writes conclusions (evolving reasoning for synthesis)
-
-Each role has 5 competing agents with **identical prompts** but different inherited reasoning patterns.
-
-### Test Dataset
-
-1. **Tracing Thought: How Neural Activation Maps Reveal Machine Cognition**  
-   Tests baseline reasoning about technical explanations
-
-2. **Evolving Insight: Can AI Learn to Interpret Itself?**  
-   Tests retention and reapplication of reasoning patterns
-
-3. **Quantum Selection: What Evolution Might Look Like in Quantum AI**  
-   Tests adaptation of reasoning to new domains
-
-4. **Quantum Minds and Digital Species: Evolution Beyond Classical Computation**  
-   Tests synthesis of reasoning across topics
-
-5. **The Evolution of Understanding: From Biological Brains to Self-Explaining Machines**  
-   Tests unified reasoning across all previous concepts
-
-### Execution
-
-Run all 3 strategies in parallel for 100 generations:
-- Strategy A population (score-weighted reasoning)
-- Strategy B population (diversity-preserved reasoning)
-- Strategy C population (usage-based reasoning)
-
-Same prompts, same RAG, different reasoning evolution.
 
 ---
 
@@ -374,90 +318,220 @@ Same prompts, same RAG, different reasoning evolution.
 ### Technology Stack
 
 - **LangGraph**: Workflow orchestration
-- **Anthropic Claude**: LLM for generation and evaluation
-- **ChromaDB**: Vector database for reasoning patterns (separate collection per agent)
-- **sentence-transformers**: Embeddings for reasoning similarity
+- **Multi-Provider LLM Support**:
+  - **Anthropic Claude** (default): claude-3-5-sonnet, claude-3-haiku
+  - **OpenAI GPT**: gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo
+- **ChromaDB**: Vector database for reasoning patterns (per-agent collections)
+- **sentence-transformers**: Embeddings for reasoning similarity (all-MiniLM-L6-v2)
 - **Shared RAG**: Separate vector DB for domain knowledge
-- **Tavily**: Web search for external knowledge
-- **Streamlit**: Dashboard for monitoring evolution
+- **Tavily**: Web search for external knowledge (optional)
+- **Rich**: Terminal visualization for monitoring evolution
 
 ### Key Architecture Points
 
 ```
-┌─────────────────────────────────────────┐
-│     Fixed Prompt Layer (Interface)      │
-│         "You write introductions"       │
-└────────────────┬────────────────────────┘
-                 │
-┌────────────────┼────────────────────────┐
-│   Shared Knowledge Layer (RAG)          │
-│   Domain facts, content, references     │
-└────────────────┼────────────────────────┘
-                 │
-┌────────────────▼────────────────────────┐
-│  Evolving Reasoning Layer (Inherited)   │
-│  Planning patterns, cognitive strategies│
-│         ┌──────────────────┐           │
-│         │ Agent 1 Reasoning │           │
-│         └──────────────────┘           │
-│         ┌──────────────────┐           │
-│         │ Agent 2 Reasoning │           │
-│         └──────────────────┘           │
-│              ... (5 per role)           │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              Fixed Prompt Layer (YAML)              │
+│           config/prompts/agents.yml                 │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│          Shared Knowledge Layer (RAG)               │
+│      Domain facts, content, references              │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│       Evolving Reasoning Layer (Inherited)          │
+│                                                     │
+│   ┌────────────┐  ┌────────────┐  ┌─────────────┐ │
+│   │Coordinator │  │   Intro    │  │    Body     │ │
+│   │   Pool     │  │   Pool     │  │    Pool     │ │
+│   │ (N agents) │  │ (N agents) │  │  (N agents) │ │
+│   └────────────┘  └────────────┘  └─────────────┘ │
+│                                                     │
+│   ┌──────────────────────────────────────────────┐ │
+│   │         Conclusion Pool (N agents)           │ │
+│   └──────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Project Structure
 
 ```
 src/lean/
-├── agents.py              # BaseAgent with reasoning inheritance
+├── base_agent.py          # BaseAgent with multi-provider LLM support
+├── coordinator.py         # CoordinatorAgent (Layer 1)
+├── specialists.py         # Specialist agents (Layer 3)
 ├── agent_pool.py          # AgentPool for population management
 ├── reasoning_memory.py    # ReasoningMemory for cognitive patterns
-├── shared_rag.py         # SharedRAG for domain knowledge
-├── evaluation.py         # Evaluator for scoring outputs
-├── pipeline.py           # LangGraph workflow orchestration
-├── state.py              # BlogState and ReasoningPattern models
-└── strategies/           # Compaction strategies for reasoning
+├── shared_rag.py          # SharedRAG for domain knowledge
+├── context_manager.py     # ContextManager for reasoning distribution
+├── evaluation.py          # ContentEvaluator for scoring outputs
+├── pipeline.py            # LangGraph workflow orchestration
+├── state.py               # BlogState TypedDict
+├── visualization.py       # StreamVisualizer for Rich terminal UI
+├── config_loader.py       # YAML configuration loader
+├── selection.py           # Selection strategies (tournament, rank, fitness)
+├── compaction.py          # Compaction strategies (score, diversity, hybrid)
+└── reproduction.py        # Reproduction strategies (sexual, asexual)
+
+config/
+├── experiments/           # Experiment configurations
+│   ├── default.yml        # Production config (20 generations)
+│   ├── fast_test.yml      # Fast test config (3 generations)
+│   └── test.yml           # Test with visualization
+├── prompts/
+│   └── agents.yml         # Agent system prompts and evaluation criteria
+└── docs/                  # Documentation for topic blocks and roles
+    ├── ai-fundamentals.md
+    ├── healthcare-ai.md
+    └── ...
 ```
 
 ---
 
 ## Running the Experiment
 
-```bash
-# Prerequisites
-# - Python 3.11+
-# - Anthropic API key
-# - uv package manager
+### Prerequisites
 
+- Python 3.11+
+- **Either** Anthropic API key **OR** OpenAI API key
+- uv package manager
+
+### Installation
+
+```bash
 # Install dependencies
 uv sync
 
 # Setup environment
 cp .env.example .env
-# Edit .env and add ANTHROPIC_API_KEY
-
-# Run experiment
-uv run python main.py
+# Edit .env and add your API key
 ```
 
-### Key Configuration
+### Configuration
+
+#### Using Anthropic Claude (Default)
 
 ```bash
-# Reasoning Memory
-INHERITED_REASONING_SIZE=100    # Max reasoning patterns inherited
-PERSONAL_REASONING_SIZE=150     # Max personal patterns stored
+# .env
+LLM_PROVIDER=anthropic
+MODEL_NAME=claude-3-5-sonnet-20241022
+ANTHROPIC_API_KEY=your_key_here
+```
+
+#### Using OpenAI GPT
+
+```bash
+# .env
+LLM_PROVIDER=openai
+MODEL_NAME=gpt-4-turbo-preview
+OPENAI_API_KEY=your_key_here
+```
+
+### YAML Configuration System
+
+All experiment settings are in YAML files:
+
+**Experiment Configuration** (`config/experiments/default.yml`):
+```yaml
+experiment:
+  name: "Default AI Topics Experiment"
+  population_size: 3              # Agents per role
+  evolution_frequency: 5          # Evolve every N generations
+  total_generations: 20
+  reasoning_dir: "./data/reasoning"
+  shared_rag_dir: "./data/shared_rag"
+  domain: "General"
+
+# Topic blocks for transfer learning
+topic_blocks:
+  - name: "AI Fundamentals"
+    generation_range: [1, 4]
+    documentation: "config/docs/ai-fundamentals.md"
+    topics:
+      - title: "The Future of Artificial Intelligence"
+        keywords: ["AI", "future", "innovation"]
+        difficulty: "intermediate"
+
+# Model configuration
+model:
+  base_temperature: 0.7
+  embedding_model: "all-MiniLM-L6-v2"
+
+# Memory configuration
+memory:
+  max_knowledge_retrieve: 3
+  max_reasoning_retrieve: 5
+  inherited_reasoning_size: 100
+  score_threshold: 7.0
+
+# Research (Tavily)
+research:
+  enabled: true
+  max_results: 5
+  search_depth: "advanced"
 
 # Evolution
-EVOLUTION_FREQUENCY=10           # Generations between evolution
-MIN_POPULATION=3                # Per role
-MAX_POPULATION=8                # Per role
+evolution:
+  selection_strategy: "tournament"    # or "rank" or "fitness"
+  compaction_strategy: "hybrid"       # or "score" or "diversity"
+  reproduction_strategy: "sexual"     # or "asexual"
 
-# Three-Layer Separation
-USE_SHARED_RAG=true             # Separate domain knowledge
-REASONING_SEARCH_ONLY=true      # Don't mix content with reasoning
-PROMPTS_IMMUTABLE=true          # Never modify prompts
+# Human-in-the-loop
+hitl:
+  enabled: true
+  auto_approve: false
+
+# Visualization
+visualization:
+  enabled: true
+```
+
+**Agent Prompts** (`config/prompts/agents.yml`):
+```yaml
+coordinator:
+  system_prompt: |
+    You are a Coordinator Agent in the LEAN evolutionary system.
+    Your role is to research, orchestrate, and critique.
+  documentation: "config/docs/coordinator-role.md"
+
+intro:
+  system_prompt: |
+    You are an Introduction Agent.
+    Craft compelling introductions that hook readers.
+  reasoning_focus: "engagement, clarity, preview"
+```
+
+### Run Experiments
+
+```bash
+# Run default experiment (20 generations)
+uv run python main.py
+
+# Run fast test (3 generations)
+uv run python main.py --config fast_test
+
+# Run with visualization enabled
+uv run python main.py --config test
+```
+
+### Key Environment Variables
+
+```bash
+# LLM Provider Selection
+LLM_PROVIDER=anthropic              # or "openai"
+MODEL_NAME=claude-3-5-sonnet-20241022
+
+# API Keys
+ANTHROPIC_API_KEY=your_key_here     # If using Claude
+OPENAI_API_KEY=your_key_here        # If using GPT
+TAVILY_API_KEY=your_key_here        # Optional: for research
+
+# Pipeline Features
+ENABLE_SPECIALISTS=true             # Enable Layer 3 specialists
+ENABLE_REVISION=true                # Enable revision loop
+MAX_REVISIONS=2                     # Maximum revisions per generation
 ```
 
 ---
@@ -470,13 +544,15 @@ PROMPTS_IMMUTABLE=true          # Never modify prompts
 - **Self-improving cognition**: Reasoning patterns get better with use
 - **Clean architecture**: Separation of interface, knowledge, and cognition
 - **Dynamic prompt-equivalent behavior**: Without fragile prompt engineering
+- **Hierarchical coordination**: Ensemble systems with coordinator oversight
 
 ### For Evolutionary Computation
 
 - **Cognitive inheritance**: Can reasoning strategies be inherited?
 - **Pattern compaction**: How to distill cognitive strategies?
 - **Reasoning selection**: Which patterns produce best outcomes?
-- **Meta-cognition**: Can reasoning about reasoning evolve?
+- **Population dynamics**: How do agent pools evolve?
+- **Selection strategies**: Tournament vs rank vs fitness-weighted
 
 ### For Cognitive Architecture
 
@@ -484,40 +560,7 @@ PROMPTS_IMMUTABLE=true          # Never modify prompts
 - **Semantic reasoning**: Cognitive patterns in embedding space
 - **Emergent specialization**: Roles develop unique thinking styles
 - **Cultural transmission**: Reasoning strategies pass through generations
-
----
-
-## Current Status
-
-**Implementation Progress:**
-- ✅ Three-layer architecture fully implemented
-- ✅ Reasoning pattern storage (ReasoningMemory class)
-- ✅ Reasoning retrieval by structural similarity + score weighting
-- ✅ Shared RAG for domain knowledge (SharedRAG class)
-- ✅ BaseAgentV2 with <think>/<final> tag externalization
-- ✅ Context distribution (40/30/20/10 weighted reasoning traces)
-- ✅ 8-step learning cycle (complete)
-- ✅ Agent factory function (create_agents_v2())
-- ✅ **M2 Phase 1: Evolution utilities** (compaction, selection, reproduction)
-- ✅ **M2 Phase 2: AgentPool integration** (population management)
-- ✅ **M2 Phase 3: Pipeline integration** (evolutionary learning cycle operational)
-- ✅ Comprehensive test suite (including evolution integration tests)
-
-**Working Features:**
-- Fixed prompt layer (IntroAgentV2, BodyAgentV2, ConclusionAgentV2)
-- Shared RAG with quality threshold (score ≥ 8.0)
-- Per-agent reasoning pattern memory with inheritance support
-- <think>/<final> tag parsing for reasoning externalization
-- ContextManager for reasoning trace distribution
-- Fitness tracking and evaluation framework
-- Storage separation (reasoning vs. domain knowledge)
-- **Evolutionary agent pools** (population-based learning)
-- **Compaction strategies** (forgetting unsuccessful patterns)
-- **Selection strategies** (parent selection for reproduction)
-- **Reproduction with inheritance** (offspring inherit compacted reasoning)
-- **Generational evolution** (configurable frequency, population size)
-
-**Status**: M2 complete - Full evolutionary learning cycle operational in PipelineV2. Agents evolve through inheritance, selection, and compaction.
+- **Hierarchical cognition**: Coordinator + content + specialist layers
 
 ---
 
@@ -528,8 +571,9 @@ This experiment investigates:
 - Which cognitive compaction strategy works best?
 - How do reasoning patterns evolve differently from content?
 - Can agents develop role-specific cognitive strategies?
+- Does hierarchical coordination improve over flat agent systems?
 - Does this approach outperform traditional prompt engineering?
 
-**Core hypothesis:** Prompts are bad at encoding how to think (that's why CoT helps). So keep prompts as simple interfaces, put content in RAG, and let reasoning patterns evolve through inheritance.
+**Core hypothesis:** Prompts are bad at encoding how to think (that's why CoT helps). So keep prompts as simple interfaces (YAML), put content in RAG, and let reasoning patterns evolve through inheritance.
 
 **Approach:** Empirical testing with statistical analysis. We're evolving cognition, not content.
