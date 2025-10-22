@@ -73,11 +73,12 @@ async def main(config_name: str = "default"):
     # Initialize pipeline with hierarchical architecture
     print("Initializing hierarchical pipeline...")
 
-    # Get pipeline-specific settings from environment
+    # Get pipeline-specific settings from configuration
+    pipeline_config = exp_config.pipeline_config or {}
     enable_research = exp_config.research_config.get('enabled', True) and bool(os.getenv('TAVILY_API_KEY'))
-    enable_specialists = os.getenv('ENABLE_SPECIALISTS', 'true').lower() == 'true'
-    enable_revision = os.getenv('ENABLE_REVISION', 'true').lower() == 'true'
-    max_revisions = int(os.getenv('MAX_REVISIONS', '2'))
+    enable_specialists = bool(pipeline_config.get('enable_specialists', True))
+    enable_revision = bool(pipeline_config.get('enable_revision', True))
+    max_revisions = int(pipeline_config.get('max_revisions', 2))
 
     # Convert agent_prompts from Dict[str, AgentPromptConfig] to Dict[str, str]
     agent_prompts_dict = {
@@ -95,7 +96,8 @@ async def main(config_name: str = "default"):
         enable_specialists=enable_specialists,
         enable_revision=enable_revision,
         max_revisions=max_revisions,
-        agent_prompts=agent_prompts_dict
+        agent_prompts=agent_prompts_dict,
+        experiment_config=exp_config
     )
 
     print("✅ Pipeline V3 initialized with Hierarchical Architecture")

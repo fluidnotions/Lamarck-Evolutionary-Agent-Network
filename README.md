@@ -63,7 +63,12 @@ intro:
 **Result:** Systems that improve their reasoning through use, not through prompt engineering.
 
 ---
-
+## Status — Experimental Debug Cycle
+  The core architecture is complete and the system is now in its empirical tuning phase. Early tests are focused on verifying cognitive inheritance, optimizing agent evolution dynamics, and resolving the usual first-generation quirks of a new architecture.
+  
+  Expect rapid iteration and occasional chaos — this is research in motion.
+  
+---
 ## The Hierarchical Architecture
 
 ### Three-Layer Ensemble System

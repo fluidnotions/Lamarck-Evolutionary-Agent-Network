@@ -12,10 +12,11 @@ Called by AgentPool.evolve_generation().
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List, TYPE_CHECKING, Any
 import uuid
 import os
 import random
+from copy import deepcopy
 
 if TYPE_CHECKING:
     from lean.base_agent import BaseAgent
@@ -35,13 +36,24 @@ class ReproductionStrategy(ABC):
     Called by AgentPool.evolve_generation() to create offspring.
     """
 
-    def __init__(self, mutation_rate: float = 0.0):
+    def __init__(
+        self,
+        mutation_rate: float = 0.0,
+        inherited_reasoning_size: int = 100,
+        embedding_model: Optional[str] = None,
+        max_reasoning_retrieve: Optional[int] = None,
+        llm_config: Optional[Dict[str, Any]] = None,
+    ):
         """Initialize reproduction strategy.
 
         Args:
             mutation_rate: Probability of mutation (0.0-1.0)
         """
         self.mutation_rate = mutation_rate
+        self.inherited_reasoning_size = inherited_reasoning_size
+        self.embedding_model = embedding_model
+        self.max_reasoning_retrieve = max_reasoning_retrieve
+        self.llm_config = llm_config or {}
         self.stats = {
             'total_reproductions': 0,
             'total_mutations': 0
@@ -89,6 +101,33 @@ class ReproductionStrategy(ABC):
         if mutated:
             self.stats['total_mutations'] += 1
 
+    def _mutate_patterns(self, patterns: List[Dict]) -> tuple[List[Dict], bool]:
+        """Mutate reasoning traces by appending a marker to the thinking text."""
+        if not patterns or self.mutation_rate <= 0:
+            return patterns, False
+
+        mutated_any = False
+        mutated_patterns: List[Dict] = []
+
+        for pattern in patterns:
+            mutated_pattern = deepcopy(pattern)
+            text_key = 'thinking' if 'thinking' in mutated_pattern else 'reasoning'
+
+            if (
+                text_key in mutated_pattern
+                and isinstance(mutated_pattern[text_key], str)
+                and random.random() < self.mutation_rate
+            ):
+                mutated_pattern[text_key] = f"{mutated_pattern[text_key]} [mutated step]"
+                metadata = deepcopy(mutated_pattern.get('metadata', {}))
+                metadata['mutated'] = True
+                mutated_pattern['metadata'] = metadata
+                mutated_any = True
+
+            mutated_patterns.append(mutated_pattern)
+
+        return mutated_patterns, mutated_any
+
 
 class AsexualReproduction(ReproductionStrategy):
     """Asexual reproduction (one parent → one offspring).
@@ -125,7 +164,7 @@ class AsexualReproduction(ReproductionStrategy):
         logger.info(f"[INHERITANCE] {parent1.agent_id} has {len(parent_patterns)} total reasoning patterns")
 
         # Compact to best patterns
-        max_inherited = int(os.getenv('INHERITED_REASONING_SIZE', '100'))
+        max_inherited = self.inherited_reasoning_size
         inherited_patterns = compaction_strategy.compact(
             parent_patterns,
             max_size=max_inherited
@@ -144,9 +183,8 @@ class AsexualReproduction(ReproductionStrategy):
 
         # Apply mutation if specified
         mutated = False
-        if random.random() < self.mutation_rate:
-            inherited_patterns = self._mutate_patterns(inherited_patterns)
-            mutated = True
+        inherited_patterns, mutated = self._mutate_patterns(inherited_patterns)
+        if mutated:
             logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent)
@@ -161,21 +199,6 @@ class AsexualReproduction(ReproductionStrategy):
 
         self._update_stats(mutated)
         return offspring
-
-    def _mutate_patterns(self, patterns: List[Dict]) -> List[Dict]:
-        """Apply mutation to patterns (add randomness).
-
-        Simple mutation: slightly adjust scores.
-        """
-        mutated = []
-        for pattern in patterns:
-            p = pattern.copy()
-            # Add small random noise to score
-            if 'score' in p:
-                noise = (random.random() - 0.5) * 1.0  # ±0.5
-                p['score'] = max(0, min(10, p['score'] + noise))
-            mutated.append(p)
-        return mutated
 
     def _create_offspring(
         self,
@@ -195,7 +218,9 @@ class AsexualReproduction(ReproductionStrategy):
         # Create reasoning memory with inherited patterns
         memory = ReasoningMemory(
             collection_name=f"{role}_{child_id}_reasoning",
-            inherited_reasoning=inherited_patterns
+            inherited_reasoning=inherited_patterns,
+            embedding_model=self.embedding_model,
+            max_retrieve=self.max_reasoning_retrieve,
         )
 
         # Map role to agent class
@@ -215,7 +240,8 @@ class AsexualReproduction(ReproductionStrategy):
             agent_id=f"{role}_{child_id}",
             reasoning_memory=memory,
             shared_rag=shared_rag,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            llm_config=self.llm_config,
         )
 
         return agent
@@ -241,14 +267,28 @@ class SexualReproduction(ReproductionStrategy):
     - Advanced: Interleave patterns by score/diversity
     """
 
-    def __init__(self, mutation_rate: float = 0.1, crossover_rate: float = 0.5):
+    def __init__(
+        self,
+        mutation_rate: float = 0.1,
+        crossover_rate: float = 0.5,
+        inherited_reasoning_size: int = 100,
+        embedding_model: Optional[str] = None,
+        max_reasoning_retrieve: Optional[int] = None,
+        llm_config: Optional[Dict[str, Any]] = None,
+    ):
         """Initialize sexual reproduction.
 
         Args:
             mutation_rate: Probability of mutation (0.0-1.0)
             crossover_rate: How to balance parents (0.5 = equal contribution)
         """
-        super().__init__(mutation_rate)
+        super().__init__(
+            mutation_rate=mutation_rate,
+            inherited_reasoning_size=inherited_reasoning_size,
+            embedding_model=embedding_model,
+            max_reasoning_retrieve=max_reasoning_retrieve,
+            llm_config=llm_config,
+        )
         self.crossover_rate = crossover_rate
 
     def reproduce(
@@ -265,7 +305,13 @@ class SexualReproduction(ReproductionStrategy):
         if parent2 is None:
             # Fallback to asexual if only one parent
             logger.warning(f"[INHERITANCE] Sexual reproduction requested but only one parent, falling back to asexual")
-            asexual = AsexualReproduction(mutation_rate=self.mutation_rate)
+            asexual = AsexualReproduction(
+                mutation_rate=self.mutation_rate,
+                inherited_reasoning_size=self.inherited_reasoning_size,
+                embedding_model=self.embedding_model,
+                max_reasoning_retrieve=self.max_reasoning_retrieve,
+                llm_config=self.llm_config,
+            )
             return asexual.reproduce(parent1, None, compaction_strategy, generation, shared_rag)
 
         # Get patterns from both parents
@@ -281,7 +327,7 @@ class SexualReproduction(ReproductionStrategy):
         logger.info(f"[INHERITANCE] Combined {len(combined_patterns)} total patterns from both parents")
 
         # Compact combined set to best patterns
-        max_inherited = int(os.getenv('INHERITED_REASONING_SIZE', '100'))
+        max_inherited = self.inherited_reasoning_size
         inherited_patterns = compaction_strategy.compact(
             combined_patterns,
             max_size=max_inherited
@@ -300,9 +346,8 @@ class SexualReproduction(ReproductionStrategy):
 
         # Apply mutation if specified
         mutated = False
-        if random.random() < self.mutation_rate:
-            inherited_patterns = self._mutate_patterns(inherited_patterns)
-            mutated = True
+        inherited_patterns, mutated = self._mutate_patterns(inherited_patterns)
+        if mutated:
             logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent1)
@@ -331,18 +376,6 @@ class SexualReproduction(ReproductionStrategy):
 
         return combined
 
-    def _mutate_patterns(self, patterns: List[Dict]) -> List[Dict]:
-        """Apply mutation to patterns."""
-        mutated = []
-        for pattern in patterns:
-            p = pattern.copy()
-            # Add small random noise to score
-            if 'score' in p:
-                noise = (random.random() - 0.5) * 1.5  # ±0.75 (stronger than asexual)
-                p['score'] = max(0, min(10, p['score'] + noise))
-            mutated.append(p)
-        return mutated
-
     def _create_offspring(
         self,
         role: str,
@@ -360,7 +393,9 @@ class SexualReproduction(ReproductionStrategy):
 
         memory = ReasoningMemory(
             collection_name=f"{role}_{child_id}_reasoning",
-            inherited_reasoning=inherited_patterns
+            inherited_reasoning=inherited_patterns,
+            embedding_model=self.embedding_model,
+            max_retrieve=self.max_reasoning_retrieve,
         )
 
         # Map role to agent class
@@ -380,7 +415,8 @@ class SexualReproduction(ReproductionStrategy):
             agent_id=f"{role}_{child_id}",
             reasoning_memory=memory,
             shared_rag=shared_rag,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            llm_config=self.llm_config,
         )
 
         return agent
@@ -417,3 +453,19 @@ def create_reproduction_strategy(
         )
 
     return strategy_class(**kwargs)
+    def __init__(
+        self,
+        mutation_rate: float = 0.0,
+        inherited_reasoning_size: int = 100,
+        embedding_model: Optional[str] = None,
+        max_reasoning_retrieve: Optional[int] = None,
+        llm_config: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(
+            mutation_rate=mutation_rate,
+            inherited_reasoning_size=inherited_reasoning_size,
+            embedding_model=embedding_model,
+            max_reasoning_retrieve=max_reasoning_retrieve,
+            llm_config=llm_config,
+        )
+
