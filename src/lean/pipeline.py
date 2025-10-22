@@ -606,7 +606,15 @@ class Pipeline:
         Returns:
             Updated state (no changes, just pass-through)
         """
-        state['stream_logs'].append("[aggregate] Content aggregated by coordinator")
+        from loguru import logger
+
+        # Log aggregation
+        logger.info("[COORDINATOR] Aggregating outputs from intro, body, conclusion")
+
+        # Add explicit stream log for visualization tracking
+        state['stream_logs'].append("[AGGREGATE] Content aggregated by coordinator")
+        state['stream_logs'].append("aggregate")  # Keyword for visualization detection
+
         return state
 
     async def _critique_node(self, state: BlogState) -> BlogState:
@@ -644,10 +652,15 @@ class Pipeline:
         overall_score = critique.get('scores', {}).get('overall', 0)
         revision_needed = critique.get('revision_needed', False)
 
+        from loguru import logger
+        logger.info(f"[COORDINATOR] Critique complete - Overall score: {overall_score:.1f}, Revision needed: {revision_needed}")
+
+        # Add explicit stream logs for visualization tracking
         state['stream_logs'].append(
-            f"[critique] Overall score: {overall_score:.1f}, "
+            f"[CRITIQUE] Overall score: {overall_score:.1f}, "
             f"Revision needed: {revision_needed}"
         )
+        state['stream_logs'].append("critique")  # Keyword for visualization detection
 
         # Track timing
         end_time = time.time()
