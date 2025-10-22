@@ -25,7 +25,7 @@ import time
 load_dotenv()
 
 from lean.state import BlogState, create_initial_state
-from lean.base_agent import create_agents
+from lean.base_agent import create_agents, IntroAgent, BodyAgent, ConclusionAgent
 from lean.coordinator import CoordinatorAgent
 from lean.specialists import create_specialist_agents
 from lean.reasoning_memory import ReasoningMemory, generate_reasoning_collection_name
@@ -34,9 +34,8 @@ from lean.evaluation import ContentEvaluator
 from lean.visualization import HierarchicalVisualizer
 from lean.agent_pool import AgentPool
 from lean.reproduction import SexualReproduction
-from lean.logger import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
 
 
 class Pipeline:
@@ -133,21 +132,71 @@ class Pipeline:
         self.evaluator = ContentEvaluator()
         self.visualizer = HierarchicalVisualizer(pipeline=self)
 
-        # Create agent pools with M2 evolution
+        # Create agent pools with initial population
+        # For ensemble competition, we need multiple agents per role
+        intro_agents = [content_agents['intro']]
+        body_agents = [content_agents['body']]
+        conclusion_agents = [content_agents['conclusion']]
+
+        # Create additional agents to fill the initial population
+        for i in range(1, population_size):
+            # Intro agents
+            intro_collection = generate_reasoning_collection_name('intro', f'agent_{i+1}')
+            intro_memory = ReasoningMemory(
+                collection_name=intro_collection,
+                persist_directory=reasoning_dir
+            )
+            intro_agents.append(IntroAgent(
+                role='intro',
+                agent_id=f'intro_agent_{i+1}',
+                reasoning_memory=intro_memory,
+                shared_rag=self.shared_rag,
+                system_prompt=self.agent_prompts.get('intro', '')
+            ))
+
+            # Body agents
+            body_collection = generate_reasoning_collection_name('body', f'agent_{i+1}')
+            body_memory = ReasoningMemory(
+                collection_name=body_collection,
+                persist_directory=reasoning_dir
+            )
+            body_agents.append(BodyAgent(
+                role='body',
+                agent_id=f'body_agent_{i+1}',
+                reasoning_memory=body_memory,
+                shared_rag=self.shared_rag,
+                system_prompt=self.agent_prompts.get('body', '')
+            ))
+
+            # Conclusion agents
+            conclusion_collection = generate_reasoning_collection_name('conclusion', f'agent_{i+1}')
+            conclusion_memory = ReasoningMemory(
+                collection_name=conclusion_collection,
+                persist_directory=reasoning_dir
+            )
+            conclusion_agents.append(ConclusionAgent(
+                role='conclusion',
+                agent_id=f'conclusion_agent_{i+1}',
+                reasoning_memory=conclusion_memory,
+                shared_rag=self.shared_rag,
+                system_prompt=self.agent_prompts.get('conclusion', '')
+            ))
+
+        # Create agent pools with full population
         self.agent_pools = {
             'intro': AgentPool(
                 role='intro',
-                initial_agents=[content_agents['intro']],
+                initial_agents=intro_agents,
                 max_size=population_size
             ),
             'body': AgentPool(
                 role='body',
-                initial_agents=[content_agents['body']],
+                initial_agents=body_agents,
                 max_size=population_size
             ),
             'conclusion': AgentPool(
                 role='conclusion',
-                initial_agents=[content_agents['conclusion']],
+                initial_agents=conclusion_agents,
                 max_size=population_size
             )
         }

@@ -14,11 +14,10 @@ from datetime import datetime
 import time
 import re
 from dotenv import load_dotenv
-from lean.logger import get_logger
+from loguru import logger
 
 load_dotenv()
 
-logger = get_logger(__name__)
 
 
 def generate_reasoning_collection_name(role: str, agent_id: str) -> str:

@@ -17,8 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import logging
-from lean.logger import get_logger
-logger = get_logger(__name__)
+from loguru import logger
 
 # Import new memory classes
 try:

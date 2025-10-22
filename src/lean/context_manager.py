@@ -13,9 +13,8 @@ Implements 40/30/20/10 weighted distribution:
 from typing import List, Dict, Optional
 import random
 import time
-from lean.logger import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
 
 
 class ContextManager:

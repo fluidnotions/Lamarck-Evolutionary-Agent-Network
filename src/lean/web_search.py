@@ -11,11 +11,10 @@ from dotenv import load_dotenv
 import hashlib
 import json
 from datetime import datetime, timedelta
-from lean.logger import get_logger
+from loguru import logger
 
 load_dotenv()
 
-logger = get_logger(__name__)
 
 # Conditional import - tavily may not be installed yet
 try:

@@ -11,13 +11,12 @@ from typing import List, Dict, Optional
 from lean.base_agent import BaseAgent
 from lean.reasoning_memory import ReasoningMemory
 from lean.shared_rag import SharedRAG
-from lean.logger import get_logger
+from loguru import logger
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = get_logger(__name__)
 
 
 class CoordinatorAgent(BaseAgent):

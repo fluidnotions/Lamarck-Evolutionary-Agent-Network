@@ -17,9 +17,8 @@ import os
 import time
 from datetime import datetime
 from dotenv import load_dotenv
-from lean.logger import get_logger
+from loguru import logger
 
-logger = get_logger(__name__)
 
 load_dotenv()
 

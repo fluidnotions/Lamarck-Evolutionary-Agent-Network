@@ -16,7 +16,6 @@ topic_blocks:
   - name: "AI Quick Test"
     description: "Minimal topics for fast testing"
     generation_range: [1, 3]
-    documentation: "config/docs/ai-fundamentals.md"
     topics:
       - title: "Introduction to AI"
         keywords: ["AI", "introduction", "basics"]
@@ -45,7 +44,7 @@ memory:
 
 # Research settings - disabled for speed
 research:
-  enabled: false
+  enabled: true
   provider: "tavily"
   max_results: 3
   search_depth: "basic"
