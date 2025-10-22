@@ -455,7 +455,7 @@ class HierarchicalVisualizer(StreamVisualizer):
         for role in ["intro", "body", "conclusion"]:
             pool = self.pipeline.agent_pools.get(role)
             if pool:
-                active_agent = pool.select_active_agent() if pool.size() > 0 else None
+                active_agent = pool.select_agent(strategy="best") if pool.size() > 0 else None
                 active_fitness = active_agent.avg_fitness() if active_agent else 0.0
 
                 evo_text += f"[bold cyan]{role.upper()} POOL:[/bold cyan]\n"
