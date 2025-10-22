@@ -14,7 +14,7 @@ from typing import List, Dict, Optional
 import random
 import numpy as np
 
-from lean.base_agent_v2 import BaseAgentV2
+from lean.base_agent import BaseAgent
 from lean.selection import SelectionStrategy, TournamentSelection
 from lean.compaction import CompactionStrategy, HybridCompaction
 from lean.reproduction import ReproductionStrategy, SexualReproduction
@@ -36,7 +36,7 @@ class AgentPool:
     def __init__(
         self,
         role: str,
-        initial_agents: List[BaseAgentV2],
+        initial_agents: List[BaseAgent],
         max_size: int = 5,
         selection_strategy: Optional[SelectionStrategy] = None,
         compaction_strategy: Optional[CompactionStrategy] = None
@@ -64,7 +64,7 @@ class AgentPool:
         # Track initial stats
         self._record_generation_stats()
 
-    def select_agent(self, strategy: str = "fitness_proportionate") -> BaseAgentV2:
+    def select_agent(self, strategy: str = "fitness_proportionate") -> BaseAgent:
         """Select agent for task execution.
 
         Called by LangGraph generation nodes (_intro_node, _body_node, etc.)
@@ -159,7 +159,7 @@ class AgentPool:
         # 4. Track history
         self._record_generation_stats()
 
-    def get_top_n(self, n: int) -> List[BaseAgentV2]:
+    def get_top_n(self, n: int) -> List[BaseAgent]:
         """Get top N agents by fitness."""
         return sorted(
             self.agents,
@@ -167,7 +167,7 @@ class AgentPool:
             reverse=True
         )[:n]
 
-    def get_random_lower_half(self) -> BaseAgentV2:
+    def get_random_lower_half(self) -> BaseAgent:
         """Get random agent from lower half (for diversity)."""
         sorted_agents = sorted(self.agents, key=lambda a: a.avg_fitness())
         lower_half = sorted_agents[:len(sorted_agents) // 2]
@@ -296,7 +296,7 @@ class AgentPool:
 
 # Convenience function for creating pools
 def create_agent_pools(
-    agents: Dict[str, BaseAgentV2],
+    agents: Dict[str, BaseAgent],
     pool_size: int = 5,
     selection_strategy: Optional[SelectionStrategy] = None,
     compaction_strategy: Optional[CompactionStrategy] = None

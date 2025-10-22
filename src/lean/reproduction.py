@@ -18,7 +18,7 @@ import os
 import random
 
 if TYPE_CHECKING:
-    from lean.base_agent_v2 import BaseAgentV2
+    from lean.base_agent import BaseAgent
     from lean.compaction import CompactionStrategy
     from lean.shared_rag import SharedRAG
     from lean.reasoning_memory import ReasoningMemory
@@ -50,12 +50,12 @@ class ReproductionStrategy(ABC):
     @abstractmethod
     def reproduce(
         self,
-        parent1: 'BaseAgentV2',
-        parent2: Optional['BaseAgentV2'],
+        parent1: 'BaseAgent',
+        parent2: Optional['BaseAgent'],
         compaction_strategy: 'CompactionStrategy',
         generation: int,
         shared_rag: Optional['SharedRAG'] = None
-    ) -> 'BaseAgentV2':
+    ) -> 'BaseAgent':
         """Create offspring from parent(s).
 
         Args:
@@ -111,12 +111,12 @@ class AsexualReproduction(ReproductionStrategy):
 
     def reproduce(
         self,
-        parent1: 'BaseAgentV2',
-        parent2: Optional['BaseAgentV2'],
+        parent1: 'BaseAgent',
+        parent2: Optional['BaseAgent'],
         compaction_strategy: 'CompactionStrategy',
         generation: int,
         shared_rag: Optional['SharedRAG'] = None
-    ) -> 'BaseAgentV2':
+    ) -> 'BaseAgent':
         """Create offspring from single parent."""
 
         # Get parent's reasoning patterns
@@ -167,9 +167,9 @@ class AsexualReproduction(ReproductionStrategy):
         generation: int,
         inherited_patterns: List[Dict],
         shared_rag: 'SharedRAG'
-    ) -> 'BaseAgentV2':
+    ) -> 'BaseAgent':
         """Create offspring agent with inherited patterns."""
-        from lean.base_agent_v2 import IntroAgentV2, BodyAgentV2, ConclusionAgentV2
+        from lean.base_agent import IntroAgent, BodyAgent, ConclusionAgent
         from lean.reasoning_memory import ReasoningMemory
 
         # Create agent with inherited patterns
@@ -183,9 +183,9 @@ class AsexualReproduction(ReproductionStrategy):
 
         # Map role to agent class
         agent_classes = {
-            'intro': IntroAgentV2,
-            'body': BodyAgentV2,
-            'conclusion': ConclusionAgentV2
+            'intro': IntroAgent,
+            'body': BodyAgent,
+            'conclusion': ConclusionAgent
         }
 
         agent_class = agent_classes.get(role)
@@ -235,12 +235,12 @@ class SexualReproduction(ReproductionStrategy):
 
     def reproduce(
         self,
-        parent1: 'BaseAgentV2',
-        parent2: Optional['BaseAgentV2'],
+        parent1: 'BaseAgent',
+        parent2: Optional['BaseAgent'],
         compaction_strategy: 'CompactionStrategy',
         generation: int,
         shared_rag: Optional['SharedRAG'] = None
-    ) -> 'BaseAgentV2':
+    ) -> 'BaseAgent':
         """Create offspring from two parents with crossover."""
 
         if parent2 is None:
@@ -310,10 +310,10 @@ class SexualReproduction(ReproductionStrategy):
         generation: int,
         inherited_patterns: List[Dict],
         shared_rag: 'SharedRAG'
-    ) -> 'BaseAgentV2':
+    ) -> 'BaseAgent':
         """Create offspring agent with inherited patterns."""
         # Same as asexual for now
-        from lean.base_agent_v2 import IntroAgentV2, BodyAgentV2, ConclusionAgentV2
+        from lean.base_agent import IntroAgent, BodyAgent, ConclusionAgent
         from lean.reasoning_memory import ReasoningMemory
 
         child_id = f"{role}_gen{generation}_child{uuid.uuid4().hex[:6]}"
@@ -325,9 +325,9 @@ class SexualReproduction(ReproductionStrategy):
 
         # Map role to agent class
         agent_classes = {
-            'intro': IntroAgentV2,
-            'body': BodyAgentV2,
-            'conclusion': ConclusionAgentV2
+            'intro': IntroAgent,
+            'body': BodyAgent,
+            'conclusion': ConclusionAgent
         }
 
         agent_class = agent_classes.get(role)

@@ -38,7 +38,7 @@ except ImportError:
             return None
 
 
-class BaseAgentV2(ABC):
+class BaseAgent(ABC):
     """Base agent with reasoning pattern memory and shared knowledge base.
 
     **Architecture**:
@@ -437,7 +437,7 @@ Now complete the task:"""
         }
 
 
-class IntroAgentV2(BaseAgentV2):
+class IntroAgent(BaseAgent):
     """Intro agent with reasoning pattern architecture."""
 
     def _get_role_instruction(self) -> str:
@@ -446,7 +446,7 @@ class IntroAgentV2(BaseAgentV2):
 concise introductions (2-3 sentences) that hook the reader and set expectations."""
 
 
-class BodyAgentV2(BaseAgentV2):
+class BodyAgent(BaseAgent):
     """Body agent with reasoning pattern architecture."""
 
     def _get_role_instruction(self) -> str:
@@ -455,7 +455,7 @@ class BodyAgentV2(BaseAgentV2):
 informative main body content with good structure, depth, and supporting details."""
 
 
-class ConclusionAgentV2(BaseAgentV2):
+class ConclusionAgent(BaseAgent):
     """Conclusion agent with reasoning pattern architecture."""
 
     def _get_role_instruction(self) -> str:
@@ -464,11 +464,11 @@ class ConclusionAgentV2(BaseAgentV2):
 conclusions that summarize key points and provide impact or a call to action."""
 
 
-def create_agents_v2(
+def create_agents(
     reasoning_dir: str = "./data/reasoning",
     shared_rag_dir: str = "./data/shared_rag",
     agent_ids: Optional[Dict[str, str]] = None
-) -> Dict[str, BaseAgentV2]:
+) -> Dict[str, BaseAgent]:
     """Create V2 agents with reasoning pattern architecture.
 
     Args:
@@ -480,7 +480,7 @@ def create_agents_v2(
         Dictionary mapping role → agent instance
 
     Example:
-        agents = create_agents_v2(
+        agents = create_agents(
             reasoning_dir="./data/reasoning",
             shared_rag_dir="./data/shared_rag",
             agent_ids={'intro': 'agent_1', 'body': 'agent_1', 'conclusion': 'agent_1'}
@@ -508,7 +508,7 @@ def create_agents_v2(
         collection_name=intro_collection,
         persist_directory=reasoning_dir
     )
-    agents['intro'] = IntroAgentV2(
+    agents['intro'] = IntroAgent(
         role='intro',
         agent_id=f"intro_{agent_ids['intro']}",
         reasoning_memory=intro_memory,
@@ -521,7 +521,7 @@ def create_agents_v2(
         collection_name=body_collection,
         persist_directory=reasoning_dir
     )
-    agents['body'] = BodyAgentV2(
+    agents['body'] = BodyAgent(
         role='body',
         agent_id=f"body_{agent_ids['body']}",
         reasoning_memory=body_memory,
@@ -534,7 +534,7 @@ def create_agents_v2(
         collection_name=conclusion_collection,
         persist_directory=reasoning_dir
     )
-    agents['conclusion'] = ConclusionAgentV2(
+    agents['conclusion'] = ConclusionAgent(
         role='conclusion',
         agent_id=f"conclusion_{agent_ids['conclusion']}",
         reasoning_memory=conclusion_memory,

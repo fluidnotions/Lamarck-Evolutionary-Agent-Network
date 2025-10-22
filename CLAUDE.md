@@ -2,11 +2,35 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important: Single Version Policy
+
+**This codebase maintains only the CURRENT version**. There are no V2, V3, or other versioned files. When the architecture evolves:
+
+- Old files are REMOVED (they remain in git history)
+- New implementations REPLACE old ones with base names (no version suffixes)
+- Documentation reflects ONLY the current state
+- Tests are for the CURRENT implementation only
+
+**Examples:**
+- ❌ `pipeline_v2.py`, `pipeline_v3.py`
+- ✅ `pipeline.py` (current implementation)
+- ❌ `BaseAgentV2`, `BaseAgentV3`
+- ✅ `BaseAgent` (current implementation)
+
+## Documentation Location Policy
+
+All markdown documentation must be stored in the `analysis/` directory, NOT in `docs/` or any other location:
+
+- **✅ CORRECT**: `analysis/architecture-guide.md`
+- **✅ CORRECT**: `analysis/implementation-notes.md`
+- **❌ WRONG**: `docs/some-guide.md`
+- **❌ WRONG**: `./some-guide.md`
+
+**Exception**: Role documentation referenced by YAML configs belongs in `config/docs/` (e.g., `config/docs/intro-role.md`).
+
 ## MCP Tools Configuration
 
-This project uses two MCP servers for enhanced code analysis and knowledge management:
-- **code-graph-mcp**: AST-based code structure analysis
-- **project-memory**: Persistent knowledge graph storage
+This project uses **code-graph-mcp** for AST-based code structure analysis.
 
 ### Code Graph MCP - Automatic Usage Rules
 
@@ -55,256 +79,6 @@ Always structure responses with:
 - **Metrics**: Complexity score if applicable
 - **Impact**: Number of callers/callees for change impact assessment
 
-**Examples:**
-
-User: "What calls the evolve function?"
-Claude Action:
-1. Call `analyze_codebase` (if not done in session)
-2. Call `find_callers("evolve")`
-3. Respond: "The `evolve()` function is called by:
-   - `population_manager.py:145` in `run_generation()`
-   - `evolution_loop.py:89` in `main_evolution_cycle()`
-   - `test_evolution.py:67` in `test_evolve_population()`"
-
-User: "Show me functions with complexity over 15"
-Claude Action:
-1. Call `complexity_analysis(threshold=15)`
-2. Sort by complexity descending
-3. Respond with formatted list including locations and scores
-
-### Project Memory MCP - Knowledge Management Rules
-
-**When to Use project-memory:**
-Claude MUST use project-memory tools for these patterns:
-
-1. **Storing Knowledge** (User explicitly asks to remember)
-   - "remember [fact]" → Use `create_entities` tool
-   - "store this" → Use `create_entities` + `add_observations`
-   - "save to memory" → Use `create_entities`
-   - After solving complex bugs → Prompt user: "Should I remember this solution?"
-   - After architectural decisions → Prompt user: "Should I store this decision?"
-
-2. **Retrieving Knowledge** (User asks about past context)
-   - "recall [topic]" → Use `search_nodes` tool
-   - "what do you know about [topic]" → Use `search_nodes` tool
-   - "do you remember [topic]" → Use `search_nodes` tool
-   - "why did we [decision]" → Use `search_nodes` tool
-   - Before major refactoring → Automatically call `search_nodes` to check for relevant decisions
-
-3. **Exploring Knowledge** (User wants to browse)
-   - "show knowledge graph" → Use `read_graph` tool
-   - "what entities exist" → Use `open_nodes` tool
-   - "what's related to [topic]" → Use `read_graph` filtered by entity
-
-4. **Updating Knowledge** (User provides new context)
-   - "add observation about [entity]" → Use `add_observations` tool
-   - "update [entity]" → Use `add_observations` tool
-   - "link [A] and [B]" → Use `create_relations` tool
-
-**What to Store in Memory:**
-
-✅ DO Store:
-- Architectural decisions and their rationale
-- Performance optimization strategies and measurements
-- Bug fixes with root cause analysis
-- Complex algorithm explanations
-- Integration patterns and gotchas
-- Domain-specific knowledge (evolutionary algorithms, agent behavior, etc.)
-- Testing strategies for specific features
-- Design tradeoffs and why alternatives were rejected
-- Non-obvious code relationships
-- Historical context for "why it's done this way"
-
-❌ DON'T Store:
-- Trivial facts easily found in code
-- Temporary implementation details
-- Simple variable names or values
-- Current session debugging notes (use `/note` command instead)
-- Code snippets (store in files, not memory)
-- Information that will quickly become outdated
-
-**Entity Types to Use:**
-- `architecture` - Design decisions, system structure
-- `solution` - Bug fixes, problem solutions
-- `pattern` - Reusable design patterns, best practices
-- `domain_knowledge` - Project-specific concepts (evolution, agents, fitness, etc.)
-- `optimization` - Performance improvements
-- `integration` - How components work together
-- `constraint` - Known limitations or requirements
-
-**Memory Storage Format:**
-
-When storing with `create_entities`:
-```json
-{
-  "name": "Clear, concise title (under 50 chars)",
-  "entityType": "architecture|solution|pattern|domain_knowledge|optimization|integration|constraint",
-  "observations": [
-    "Primary observation: [the main fact/decision]",
-    "Rationale: [why this decision was made]",
-    "Context: [when/where this applies]",
-    "Impact: [what this affects]",
-    "Stored: [date]"
-  ]
-}
-```
-
-When creating relationships with `create_relations`:
-```json
-{
-  "from": "entity_id_1",
-  "to": "entity_id_2", 
-  "relationType": "depends_on|implements|solves|relates_to|conflicts_with"
-}
-```
-
-**Examples:**
-
-User: "Remember: we use async/await for all agent communication"
-Claude Action:
-1. Call `create_entities`:
-```json
-   {
-     "name": "Async Agent Communication Pattern",
-     "entityType": "architecture",
-     "observations": [
-       "All agent-to-agent communication uses async/await",
-       "Rationale: Prevents blocking during long-running fitness evaluations",
-       "Impact: Allows concurrent evolution of multiple populations",
-       "Critical for scaling beyond 100 agents",
-       "See: agent_network/communication.py"
-     ]
-   }
-```
-2. Call `create_relations` to link to `agent_network` module
-3. Respond: "✅ Stored architectural decision: Async Agent Communication Pattern"
-
-User: "What do you know about fitness evaluation?"
-Claude Action:
-1. Call `search_nodes("fitness evaluation")`
-2. Retrieve top 3-5 relevant memories
-3. Present formatted results with:
-   - Entity names and types
-   - Stored observations
-   - Related entities/code locations
-   - Relevance scores
-
-User: "Why did we implement copy-on-write for fitness?"
-Claude Action:
-1. Call `search_nodes("copy-on-write fitness")`
-2. If found, present the stored rationale
-3. If not found: "No memory found. Should I search the code with code-graph-mcp?"
-
-### Combined Workflow - Using Both Tools Together
-
-For complex development tasks, use both MCP tools strategically:
-
-**Before Refactoring:**
-1. `code-graph-mcp`: Analyze current structure
-```
-   "What calls the fitness_evaluation function?" 
-   "Show complexity analysis for fitness module"
-```
-2. `project-memory`: Recall design decisions
-```
-   "What do you know about fitness evaluation design?"
-```
-3. Make informed decision with full context
-
-**After Solving a Complex Bug:**
-1. Document the solution in memory:
-```
-   /remember "Race condition in fitness calculation: Multiple agents were 
-   accessing shared cache concurrently. Fixed with copy-on-write semantics 
-   in fitness.py:145-167. Root cause: Missing synchronization in CacheManager."
-```
-2. Use code-graph to verify the fix doesn't break callers:
-```
-   "What functions call CacheManager methods?"
-```
-
-**Starting Work on New Feature:**
-1. Check for existing knowledge:
-```
-   "What do you know about [feature area]?"
-```
-2. Analyze related code:
-```
-   "Show me the structure of the [module] module"
-   "Find functions related to [feature]"
-```
-3. Plan implementation with full context
-
-### Proactive Tool Usage
-
-Claude should proactively suggest using these tools:
-
-**Suggest code-graph when:**
-- User mentions refactoring without analyzing impact
-- User asks about code structure in vague terms
-- Discussing changes to functions with many callers
-- Need to understand cascade effects of changes
-
-**Suggest memory when:**
-- User makes an important architectural decision (offer to store it)
-- User solves a non-trivial bug (offer to document solution)
-- User asks "why" questions that might have historical context
-- Before major refactoring (check for documented constraints)
-
-**Example proactive responses:**
-
-User: "I'm going to refactor the evolve function"
-Claude: "Let me first analyze its impact with code-graph:
-1. What calls evolve() [using find_callers]
-2. Complexity analysis [using complexity_analysis]
-3. Check for documented design decisions [using memory search_nodes]
-
-Then we can plan the refactoring safely."
-
-User: "I fixed the race condition by adding locks"
-Claude: "Great! That was a tricky bug. Would you like me to store this solution 
-in project memory so we remember:
-- What the bug was
-- Root cause
-- How it was fixed
-- Where to look if similar issues appear?"
-
-### Error Handling
-
-**If code-graph tools fail:**
-1. Check if `analyze_codebase` has been run
-2. If not, run it automatically: "Building code graph first..."
-3. If it fails, fall back to manual code reading and explain: "Code graph unavailable, analyzing files directly"
-
-**If memory tools fail:**
-1. Check database connection (MEMORY_DB_PATH)
-2. Provide helpful error message
-3. Offer alternative: "Can't access memory. Should I use /note to document this instead?"
-
-**If tools return no results:**
-1. Suggest alternative search terms
-2. Offer to search with broader criteria
-3. For code-graph: "Function not found. Did you mean: [suggestions]?"
-4. For memory: "No memories found. Should I search the code instead?"
-
-### Performance Considerations
-
-- Code graph analysis may take 10-30 seconds for large projects
-- Memory searches are fast (<1 second typically)
-- Cache code graph results within a session
-- Rebuild code graph after major changes or at session start
-- Don't rebuild unnecessarily - check if recent analysis exists
-
-### Integration with Existing Commands
-
-These MCP tools enhance existing commands:
-
-- `/work` → Use code-graph to understand dependencies before implementing
-- `/issue` → Use memory to recall related architectural decisions
-- `/explore` → Use both tools to gather context
-- `/note` → For session notes; use memory for permanent knowledge
-- `/kanban` → Use code-graph to analyze impact of completed work
-
 ## Project Overview
 
 **LEAN (Lamarck Evolutionary Agent Network)** is a research prototype testing **Lamarckian evolution** for AI agents through:
@@ -313,137 +87,141 @@ These MCP tools enhance existing commands:
 - **Evolutionary agent pools** with selection, compaction, and reproduction
 - **Pattern inheritance** from successful parent agents
 - **YAML-based experiment configuration**
+- **Hierarchical 3-layer architecture** with coordinator, content agents, and specialists
 
 **Core Research Question**: Can agents improve by inheriting their parents' reasoning patterns rather than through prompt engineering?
 
+## Current Architecture
 
-## V2 Architecture (Current)
+The system uses a **3-layer hierarchical architecture**:
 
-The V2 system uses a **3-layer separation** of concerns:
+### Layer 1: Coordinator
+- **CoordinatorAgent** orchestrates the entire workflow
+- Researches topics using Tavily API
+- Synthesizes research into context for content agents
+- Aggregates outputs and critiques quality
+- Requests revisions if quality is below threshold
 
-### Layer 1: Fixed Interface (Prompts)
-- Frozen system prompts define agent roles
-- Never mutate during evolution
-- Provides stable behavioral API
-- Located in `config/prompts/agents.yml`
+### Layer 2: Content Agents
+- **IntroAgent** - Writes introductions
+- **BodyAgent** - Writes main content
+- **ConclusionAgent** - Writes conclusions
+- Organized in evolutionary **AgentPools** (population-based evolution)
+- Each agent has ReasoningMemory (cognitive patterns) and SharedRAG access
 
-### Layer 2: Shared Knowledge (SharedRAG)
-- Domain facts and reference materials
-- Available to all agents equally
-- Standard semantic retrieval
-- Separate from reasoning patterns
+### Layer 3: Specialist Agents
+- **ResearcherAgent** - Deep research and evidence validation
+- **FactCheckerAgent** - Claim verification and accuracy checking
+- **StylistAgent** - Clarity and readability enhancement
+- Invoked by content agents when needed
 
-### Layer 3: Evolving Reasoning (ReasoningMemory)
-- Planning sequences and problem-solving steps
-- Cognitive strategies that worked
-- **Inherited from parents** during evolution
-- **Personal patterns** from own experience
-- Retrieved by structural similarity
+### Workflow
+
+```
+START
+  ↓
+[1. RESEARCH]        ← Coordinator researches topic via Tavily
+  ↓
+[2. DISTRIBUTE]      ← Coordinator synthesizes & distributes context
+  ↓
+[3. INTRO]           ← IntroAgent generates with coordinator context
+  ↓
+[4. BODY]            ← BodyAgent generates (with optional specialist support)
+  ↓
+[5. CONCLUSION]      ← ConclusionAgent generates with full context
+  ↓
+[6. AGGREGATE]       ← Coordinator aggregates outputs
+  ↓
+[7. CRITIQUE]        ← Coordinator critiques quality
+  ↓
+[REVISION LOOP?]     ← If quality < threshold & revisions < max
+  │                     YES: feedback → back to [3. INTRO]
+  ↓ NO
+[8. EVALUATE]        ← ContentEvaluator scores sections
+  ↓
+[9. EVOLVE]          ← Store patterns, trigger pool evolution
+  ↓
+END
+```
 
 ## Key Components
 
-### V2 Agents (`src/lean/base_agent_v2.py`)
+### Core Agents
 
-```python
-class BaseAgentV2:
-    """Agent with reasoning pattern externalization."""
+- **`base_agent.py`**: Base agent architecture with reasoning externalization
+  - `BaseAgent` abstract class
+  - `IntroAgent`, `BodyAgent`, `ConclusionAgent` implementations
+  - `create_agents()` factory function
+  - All agents use `<think>` tags for reasoning externalization
+  - All agents have ReasoningMemory and SharedRAG access
 
-    def __init__(self, role: str, reasoning_memory, shared_rag, ...):
-        self.reasoning_memory = ReasoningMemory()  # Cognitive patterns
-        self.shared_rag = SharedRAG()              # Domain knowledge
-        self.system_prompt = ...                    # Frozen prompt
-```
+- **`coordinator.py`**: Coordinator agent with research and critique
+  - `CoordinatorAgent` extends `BaseAgent`
+  - Tavily research integration
+  - Context synthesis and distribution
+  - Quality critique and revision requests
 
-**Agent Types**:
-- `IntroAgentV2` - Introduction sections
-- `BodyAgentV2` - Main content sections
-- `ConclusionAgentV2` - Conclusion sections
+- **`specialists.py`**: Specialist support agents
+  - `ResearcherAgent` - Evidence validation
+  - `FactCheckerAgent` - Accuracy verification
+  - `StylistAgent` - Style enhancement
+  - All extend `BaseAgent`
 
-### M2 Evolution System
+### Pipeline & Orchestration
 
-**Agent Pools** (`src/lean/agent_pool.py`):
-- Maintains population of agents per role
-- Tracks fitness scores
-- Triggers evolution at specified frequency
-- Manages agent lifecycle
+- **`pipeline.py`**: Hierarchical pipeline orchestrator
+  - `Pipeline` class manages workflow
+  - LangGraph-based execution flow
+  - Configurable features (research, specialists, revision)
+  - Evolution integration
 
-**Selection Strategies** (`src/lean/selection.py`):
-- `tournament_selection` - Best of random subset
-- `rank_based_selection` - Probability proportional to rank
-- `fitness_proportionate_selection` - Roulette wheel
-
-**Compaction Strategies** (`src/lean/compaction.py`):
-- `score_based_compaction` - Keep highest-scoring patterns
-- `diversity_based_compaction` - Probabilistic for variety
-- `hybrid_compaction` - Combine both approaches
-
-**Reproduction Strategies** (`src/lean/reproduction.py`):
-- `sexual_reproduction` - Two parents, merge patterns
-- `asexual_reproduction` - Clone with mutation
+- **`agent_pool.py`**: Population-based evolution
+  - `AgentPool` class manages agent populations
+  - Fitness tracking and selection
+  - Evolution triggers (every N generations)
 
 ### Memory Systems
 
-**ReasoningMemory** (`src/lean/reasoning_memory.py`):
-- Stores `<think>...</think>` reasoning traces
-- Separate inherited vs personal patterns
-- Compaction during reproduction
-- CPU-based embeddings (avoid GPU OOM)
-
-**SharedRAG** (`src/lean/shared_rag.py`):
-- Stores domain knowledge from all agents
-- Metadata: source (role, generation, score)
-- Query by semantic similarity
-- Statistics tracking
-
-**ContextManager** (`src/lean/context_manager.py`):
-- Distributes context with 40/30/20/10 weighting:
-  - 40%: Current topic
-  - 30%: Retrieved reasoning patterns
-  - 20%: Domain knowledge from SharedRAG
-  - 10%: Reserved for future use
-
-### Pipeline V2 (`src/lean/pipeline_v2.py`)
-
-8-step learning cycle per generation:
-
-1. **Select** active agents from pools
-2. **Retrieve** reasoning patterns + domain knowledge
-3. **Generate** content with structured prompts
-4. **Extract** reasoning from `<think>` tags
-5. **Evaluate** content quality (0-10 scores)
-6. **Store** successful patterns + knowledge
-7. **Update** agent fitness scores
-8. **Evolve** (if generation % frequency == 0):
-   - Select parents by fitness
-   - Compact reasoning patterns
-   - Reproduce offspring
-   - Replace population
-
-## Module Responsibilities
-
-### Core V2 Modules
-
-- **`base_agent_v2.py`**: V2 agent architecture with reasoning externalization
-- **`pipeline_v2.py`**: V2 pipeline orchestrator with M2 evolution
 - **`reasoning_memory.py`**: Cognitive pattern storage (Layer 3)
+  - Stores `<think>...</think>` reasoning traces
+  - Separate inherited vs personal patterns
+  - Compaction during reproduction
+  - CPU-based embeddings (avoid GPU OOM)
+
 - **`shared_rag.py`**: Shared knowledge base (Layer 2)
+  - Stores domain knowledge from all agents
+  - Metadata: source (role, generation, score)
+  - Query by semantic similarity
+  - Statistics tracking
+
 - **`context_manager.py`**: Context distribution with weighting
-- **`config_loader.py`**: YAML configuration loader
+  - 40%: Current topic/hierarchy context
+  - 30%: High credibility reasoning patterns
+  - 20%: Diverse reasoning patterns
+  - 10%: Peer reasoning patterns
 
-### M2 Evolution Modules
+### Evolution Components
 
-- **`agent_pool.py`**: Agent pool management
 - **`selection.py`**: Selection strategies
-- **`compaction.py`**: Memory compaction strategies
-- **`reproduction.py`**: Reproduction strategies
+  - Tournament selection
+  - Rank-based selection
+  - Fitness-proportionate selection
 
-### Shared Core Modules
+- **`compaction.py`**: Memory compaction strategies
+  - Score-based compaction (keep best patterns)
+  - Diversity-based compaction (maintain variety)
+  - Hybrid compaction
+
+- **`reproduction.py`**: Reproduction strategies
+  - Sexual reproduction (two parents)
+  - Asexual reproduction (clone with mutation)
+
+### Supporting Modules
 
 - **`state.py`**: `BlogState` TypedDict, state creation
 - **`evaluation.py`**: `ContentEvaluator` for scoring (0-10)
 - **`visualization.py`**: `StreamVisualizer` for Rich terminal UI
-- **`web_search.py`**: Tavily research integration (optional)
-- **`human_in_the_loop.py`**: HITL feedback interface (optional)
+- **`config_loader.py`**: YAML configuration loader
 
 ### Configuration System
 
@@ -457,17 +235,17 @@ class BaseAgentV2:
 # Install dependencies
 uv sync
 
-# Run V2 pipeline with default config
-uv run python main_v2.py
+# Run pipeline with default config
+uv run python main.py
 
 # Run with custom experiment config
-uv run python main_v2.py --config healthcare_study
+uv run python main.py --config healthcare_study
 
 # Run tests
-uv run pytest                                     # All tests
-uv run pytest tests/test_pipeline_v2.py -v       # V2 pipeline
-uv run pytest tests/test_agent_pool.py -v        # M2 evolution
-uv run pytest --cov=src/lean                     # With coverage
+uv run pytest                           # All tests
+uv run pytest tests/test_pipeline.py -v  # Pipeline tests
+uv run pytest tests/test_agent_pool.py -v  # Evolution tests
+uv run pytest --cov=src/lean            # With coverage
 
 # Type checking
 uv run mypy src/lean
@@ -478,7 +256,10 @@ uv run mypy src/lean
 1. Copy `.env.example` to `.env`
 2. Add `ANTHROPIC_API_KEY`
 3. Optional: Add `TAVILY_API_KEY` for research integration
-4. Key configuration (in YAML or .env):
+4. Key configuration:
+   - `ENABLE_SPECIALISTS=true` - Enable Layer 3 specialist agents
+   - `ENABLE_REVISION=true` - Enable revision loop
+   - `MAX_REVISIONS=2` - Maximum revision iterations
    - `MEMORY_SCORE_THRESHOLD=7.0` - Store patterns scoring ≥7.0
    - `BASE_TEMPERATURE=0.7` - Starting temperature
    - `EVOLUTION_LEARNING_RATE=0.1` - Evolution aggressiveness
@@ -519,6 +300,7 @@ intro:
   system_prompt: |
     You are an Introduction Agent...
   reasoning_focus: "engagement, clarity, preview"
+  documentation: "config/docs/intro-role.md"
 ```
 
 ## Key Design Patterns
@@ -550,14 +332,14 @@ The `<think>` content is:
 ```python
 class AgentPool:
     def __init__(self, role: str, population_size: int):
-        self.population: List[BaseAgentV2] = []
+        self.population: List[BaseAgent] = []
         self.fitness_scores: Dict[str, float] = {}
 
-    def select_active_agent(self) -> BaseAgentV2:
+    def select_active_agent(self) -> BaseAgent:
         """Select best agent for current generation."""
-        return max(self.population, key=lambda a: self.fitness_scores[a.id])
+        return fitness_proportionate_selection(self.population)
 
-    def evolve(self) -> List[BaseAgentV2]:
+    def evolve(self) -> List[BaseAgent]:
         """Trigger evolution: select, compact, reproduce."""
         parents = self.select_parents()
         offspring = self.reproduce(parents)
@@ -597,7 +379,7 @@ def sexual_reproduction(parent1, parent2):
     offspring_patterns = p1_compact + p2_compact
 
     # Create new agent
-    offspring = BaseAgentV2(
+    offspring = BaseAgent(
         role=parent1.role,
         inherited_reasoning=offspring_patterns
     )
@@ -610,7 +392,7 @@ def sexual_reproduction(parent1, parent2):
 
 1. Create YAML config: `config/experiments/my_experiment.yml`
 2. Define topic blocks with generation ranges
-3. Run: `python main_v2.py --config my_experiment`
+3. Run: `python main.py --config my_experiment`
 
 ### Customizing Agent Prompts
 
@@ -636,31 +418,25 @@ def sexual_reproduction(parent1, parent2):
 
 1. Get API key from https://tavily.com
 2. Add to `.env`: `TAVILY_API_KEY=your_key`
-3. Enable in config:
-   ```yaml
-   research:
-     enabled: true
-     max_results: 5
-     search_depth: "advanced"
-   ```
+3. Research is automatically enabled if key present
 
 ## Testing Strategy
 
 Tests organized by component:
-- `test_agent_factory_v2.py` - V2 agent creation
-- `test_pipeline_v2.py` - V2 pipeline
+- `test_pipeline.py` - Pipeline orchestration
 - `test_agent_pool.py` - Agent pool management
+- `test_coordinator.py` - Coordinator agent
+- `test_specialists.py` - Specialist agents
 - `test_selection.py` - Selection strategies
 - `test_compaction.py` - Compaction strategies
 - `test_reproduction.py` - Reproduction strategies
 - `test_reasoning_integration.py` - Reasoning pattern flow
 - `test_evolution_integration.py` - Full evolution cycle
 - `test_state.py` - State validation
-- `test_web_search.py` - Tavily integration
 
 ## Observing Learning
 
-After running `main_v2.py`:
+After running `main.py`:
 
 1. **Reasoning patterns**: `ls data/reasoning/` - Stored cognitive patterns
 2. **Domain knowledge**: `ls data/shared_rag/` - Shared knowledge base
@@ -672,14 +448,13 @@ Expected: Gradual improvement in scores as patterns accumulate and best agents r
 
 ## Important Notes
 
-- **V2 Architecture**: Current implementation uses flat evolutionary pools, not hierarchical structure
-- **3-Layer Separation**: Prompts (frozen) | Knowledge (shared) | Reasoning (evolved)
+- **Single Version**: No V2/V3 files - only current implementation
+- **3-Layer Architecture**: Coordinator → Content Agents → Specialists
 - **Pattern Inheritance**: Offspring inherit compacted reasoning from parents
 - **YAML Configuration**: Experiments and prompts defined declaratively
 - **CPU Embeddings**: Shared embedder on CPU to avoid GPU OOM
-- **No Hierarchy**: Removed M6-M9 hierarchical code (coordinator, specialists, semantic distance)
-- **No Trust Weighting**: Removed M2 trust-based weighting system
-- **Focus on Evolution**: Current focus is M2 agent pools with pattern inheritance
+- **Research Integration**: Tavily API for real-time information gathering
+- **Revision Loop**: Quality assurance through coordinator critique
 
 ## Research Context
 
@@ -689,17 +464,18 @@ This prototype tests hypotheses:
 3. **Separation of Concerns**: Is frozen prompts + evolved reasoning better than prompt engineering?
 4. **Transfer Learning**: Do reasoning patterns help on similar tasks?
 5. **Population Dynamics**: Which selection/compaction strategies work best?
+6. **Hierarchical Coordination**: Does coordinator-driven workflow improve quality?
 
 The demo (20 topics, 4 blocks) is designed to test transfer learning across thematic groups.
 
-## Documentation
+## Analysis Documents
 
-- **`README.md`**: Research motivation, architecture overview
-- **`docs/yaml-configuration-guide.md`**: Complete YAML config reference
-- **`config/README.md`**: Quick start for configuration
-- **`HITL_README.md`**: Human-in-the-loop feature guide
-- **`docs/*.md`**: Analysis documents and guides
+Comprehensive guides are in `analysis/`:
+- `analysis/architecture-implementation-gap.md` - Original gap analysis
+- `analysis/v3-hierarchical-implementation-guide.md` - Implementation guide
+- `analysis/v3-implementation-summary.md` - Feature summary
+- `analysis/EXPERIMENTS.md` - Experiment tracking
 
 ---
 
-**This is research code focused on V2 reasoning pattern evolution. V1 hierarchical code has been removed.**
+**This is research code focused on reasoning pattern evolution with hierarchical coordination.**
