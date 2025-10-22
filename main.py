@@ -30,12 +30,7 @@ from src.lean.logger import setup_logger
 load_dotenv()
 
 # Initialize logging (file-based, no console spam)
-logger = setup_logger(
-    name="lean",
-    log_dir="./logs",
-    log_level=os.getenv("LOG_LEVEL", "INFO"),
-    console_output=False  # Don't spam console, logs go to files only
-)
+setup_logger(log_dir="./logs")
 
 
 async def main(config_name: str = "default"):
