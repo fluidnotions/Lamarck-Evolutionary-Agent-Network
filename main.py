@@ -66,6 +66,15 @@ async def main(config_name: str = "default"):
         print(f"❌ Error loading configuration: {e}")
         return
 
+    # Reconfigure logging if config specifies a level
+    log_level = (exp_config.logging_config or {}).get('level') if hasattr(exp_config, 'logging_config') else None
+    if log_level:
+        setup_logger(log_dir="./logs", level=log_level)
+
+    # Configure visualization toggle
+    viz_enabled = (exp_config.visualization_config or {}).get('enabled', True)
+    os.environ['ENABLE_VISUALIZATION'] = 'true' if viz_enabled else 'false'
+
     print(f"✅ Loaded: {exp_config.name}")
     print(f"   {exp_config.description}")
     print()
@@ -74,10 +83,24 @@ async def main(config_name: str = "default"):
     print("Initializing hierarchical pipeline...")
 
     # Get pipeline-specific settings from environment
-    enable_research = exp_config.research_config.get('enabled', True) and bool(os.getenv('TAVILY_API_KEY'))
+    memory_config = exp_config.memory_config or {}
+    if 'shared_rag_min_score' in memory_config:
+        os.environ['SHARED_RAG_MIN_SCORE'] = str(memory_config['shared_rag_min_score'])
+    if 'max_reasoning_retrieve' in memory_config:
+        os.environ['MAX_REASONING_RETRIEVE'] = str(memory_config['max_reasoning_retrieve'])
+    if 'max_knowledge_retrieve' in memory_config:
+        os.environ['MAX_KNOWLEDGE_RETRIEVE'] = str(memory_config['max_knowledge_retrieve'])
+
+    tavily_key_present = bool(os.getenv('TAVILY_API_KEY'))
+    if not tavily_key_present:
+        exp_config.research_config['enabled'] = False
+
+    enable_research_config = exp_config.research_config.get('enabled', True)
+    enable_research = enable_research_config and tavily_key_present
     enable_specialists = os.getenv('ENABLE_SPECIALISTS', 'true').lower() == 'true'
     enable_revision = os.getenv('ENABLE_REVISION', 'true').lower() == 'true'
     max_revisions = int(os.getenv('MAX_REVISIONS', '2'))
+    mutation_rate = (exp_config.evolution_config or {}).get('mutation_rate', 0.0)
 
     # Convert agent_prompts from Dict[str, AgentPromptConfig] to Dict[str, str]
     agent_prompts_dict = {
@@ -91,6 +114,7 @@ async def main(config_name: str = "default"):
         domain=exp_config.domain,
         population_size=exp_config.population_size,
         evolution_frequency=exp_config.evolution_frequency,
+        mutation_rate=mutation_rate,
         enable_research=enable_research,
         enable_specialists=enable_specialists,
         enable_revision=enable_revision,

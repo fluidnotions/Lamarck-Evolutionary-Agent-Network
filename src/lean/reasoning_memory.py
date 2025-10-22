@@ -13,10 +13,14 @@ import os
 from datetime import datetime
 import time
 import re
+from threading import Lock
 from dotenv import load_dotenv
 from loguru import logger
 
 load_dotenv()
+
+
+collection_lock = Lock()
 
 
 
@@ -289,9 +293,10 @@ class ReasoningMemory:
             return []
 
         # Get all reasoning patterns from collection
-        all_data = self.collection.get(
-            include=['documents', 'metadatas']
-        )
+        with collection_lock:
+            all_data = self.collection.get(
+                include=['documents', 'metadatas']
+            )
 
         patterns = []
         for i, doc in enumerate(all_data['documents']):
@@ -326,13 +331,15 @@ class ReasoningMemory:
         """Increment the retrieval count for a reasoning pattern in database."""
         try:
             # Get current metadata
-            result = self.collection.get(ids=[pattern_id], include=["metadatas"])
+            with collection_lock:
+                result = self.collection.get(ids=[pattern_id], include=["metadatas"])
             if result["metadatas"]:
                 metadata = result["metadatas"][0]
                 metadata["retrieval_count"] = metadata.get("retrieval_count", 0) + 1
 
                 # Update metadata
-                self.collection.update(ids=[pattern_id], metadatas=[metadata])
+                with collection_lock:
+                    self.collection.update(ids=[pattern_id], metadatas=[metadata])
         except Exception as e:
             logger.warning(f"Failed to increment retrieval count: {e}")
 
@@ -361,7 +368,8 @@ class ReasoningMemory:
             }
 
         # Get all metadata
-        all_data = self.collection.get(include=["metadatas"])
+        with collection_lock:
+            all_data = self.collection.get(include=["metadatas"])
         scores = [m.get("score", 0) for m in all_data["metadatas"]]
         retrievals = [
             self.retrieval_counts.get(all_data['ids'][i], m.get("retrieval_count", 0))

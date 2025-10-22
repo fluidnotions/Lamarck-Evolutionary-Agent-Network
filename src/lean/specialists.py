@@ -93,7 +93,7 @@ RECOMMENDATIONS:
         response_text = response.content
 
         # Parse response
-        thinking, output = self._parse_response(response_text)
+        thinking, output, _ = self._parse_response(response_text, prompt)
 
         return {
             'claim': claim,
@@ -186,7 +186,7 @@ STATUS: [VERIFIED/NEEDS_REVISION/UNCERTAIN]
         response_text = response.content
 
         # Parse response
-        thinking, output = self._parse_response(response_text)
+        thinking, output, _ = self._parse_response(response_text, prompt)
 
         return {
             'content_checked': content[:200] + "...",
@@ -276,7 +276,7 @@ TONE CONSISTENCY: [GOOD/NEEDS_WORK]
         response_text = response.content
 
         # Parse response
-        thinking, output = self._parse_response(response_text)
+        thinking, output, _ = self._parse_response(response_text, prompt)
 
         return {
             'original_content': content[:200] + "...",

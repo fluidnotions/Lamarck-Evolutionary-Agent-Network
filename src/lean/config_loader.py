@@ -69,6 +69,9 @@ class ExperimentConfig:
     # Visualization Configuration
     visualization_config: Optional[Dict[str, Any]] = None
 
+    # Logging Configuration
+    logging_config: Optional[Dict[str, Any]] = None
+
     def get_config_value(self, section: str, key: str, default: Any = None, env_var: str = None) -> Any:
         """Get configuration value from YAML with fallback to environment variable.
 
@@ -202,7 +205,8 @@ class ConfigLoader:
             memory_config=data.get('memory', {}),
             evolution_config=data.get('evolution', {}),
             hitl_config=data.get('hitl', {}),
-            visualization_config=data.get('visualization', {})
+            visualization_config=data.get('visualization', {}),
+            logging_config=data.get('logging', {})
         )
 
     def load_agent_prompts(self) -> Dict[str, AgentPromptConfig]:

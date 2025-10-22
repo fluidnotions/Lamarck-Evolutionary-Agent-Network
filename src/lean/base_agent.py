@@ -156,12 +156,12 @@ class BaseAgent(ABC):
         response_text = response.content
 
         # Parse <think> and <final> sections
-        thinking, output = self._parse_response(response_text)
+        thinking, output, parsed_response = self._parse_response(response_text, prompt)
 
         return {
             'thinking': thinking,
             'output': output,
-            'raw_response': response_text
+            'raw_response': parsed_response
         }
 
     def _format_reasoning_patterns(self, patterns: List[Dict]) -> str:
@@ -291,20 +291,49 @@ Now complete the task:"""
             Role instruction string
         """
         if self.system_prompt:
-            return self.system_prompt
+            prompt = self.system_prompt.strip()
+        else:
+            prompt = f"You are a {self.role} agent. Generate high-quality content for your assigned role."
 
-        # Fallback to default generic prompt if no YAML prompt provided
-        return f"You are a {self.role} agent. Generate high-quality content for your assigned role."
+        directive = "Always output reasoning inside <think>...</think> and final result inside <final>...</final>."
+        if directive.lower() not in prompt.lower():
+            prompt = f"{prompt}\n\n{directive}"
 
-    def _parse_response(self, response_text: str) -> Tuple[str, str]:
+        return prompt
+
+    def _validate_tags(self, response_text: str) -> bool:
+        """Check whether response contains both <think> and <final> tags."""
+        has_think = bool(re.search(r'<think>.*?</think>', response_text, re.DOTALL | re.IGNORECASE))
+        has_final = bool(re.search(r'<final>.*?</final>', response_text, re.DOTALL | re.IGNORECASE))
+        return has_think and has_final
+
+    def _parse_response(
+        self,
+        response_text: str,
+        prompt: Optional[str] = None,
+        retry_allowed: bool = True
+    ) -> Tuple[str, str, str]:
         """Parse <think> and <final> sections from LLM response.
 
         Args:
             response_text: Raw LLM response
+            prompt: Prompt that generated the response (used for retries)
+            retry_allowed: Whether a retry can be attempted
 
         Returns:
-            Tuple of (thinking, output)
+            Tuple of (thinking, output, raw_response)
         """
+        if not self._validate_tags(response_text) and retry_allowed and prompt:
+            logger.warning(
+                f"Missing <think>/<final> tags for {self.role}. Requesting one retry with explicit reminder."
+            )
+            retry_prompt = (
+                f"{prompt}\n\nYour previous response did not follow the required format. "
+                "Please restate your full answer using both <think> and <final> tags."
+            )
+            retry_response = self.llm.invoke(retry_prompt)
+            response_text = retry_response.content
+
         # Extract <think> content
         think_pattern = r'<think>(.*?)</think>'
         think_match = re.search(think_pattern, response_text, re.DOTALL | re.IGNORECASE)
@@ -321,7 +350,7 @@ Now complete the task:"""
             thinking = "No reasoning provided"
             output = response_text
 
-        return thinking, output
+        return thinking, output, response_text
 
     def prepare_reasoning_storage(
         self,

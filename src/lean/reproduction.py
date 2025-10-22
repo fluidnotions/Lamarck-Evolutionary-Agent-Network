@@ -16,6 +16,7 @@ from typing import Optional, Dict, List, TYPE_CHECKING
 import uuid
 import os
 import random
+from copy import deepcopy
 
 if TYPE_CHECKING:
     from lean.base_agent import BaseAgent
@@ -89,6 +90,33 @@ class ReproductionStrategy(ABC):
         if mutated:
             self.stats['total_mutations'] += 1
 
+    def _mutate_patterns(self, patterns: List[Dict]) -> tuple[List[Dict], bool]:
+        """Mutate reasoning traces by appending a marker to the thinking text."""
+        if not patterns or self.mutation_rate <= 0:
+            return patterns, False
+
+        mutated_any = False
+        mutated_patterns: List[Dict] = []
+
+        for pattern in patterns:
+            mutated_pattern = deepcopy(pattern)
+            text_key = 'thinking' if 'thinking' in mutated_pattern else 'reasoning'
+
+            if (
+                text_key in mutated_pattern
+                and isinstance(mutated_pattern[text_key], str)
+                and random.random() < self.mutation_rate
+            ):
+                mutated_pattern[text_key] = f"{mutated_pattern[text_key]} [mutated step]"
+                metadata = deepcopy(mutated_pattern.get('metadata', {}))
+                metadata['mutated'] = True
+                mutated_pattern['metadata'] = metadata
+                mutated_any = True
+
+            mutated_patterns.append(mutated_pattern)
+
+        return mutated_patterns, mutated_any
+
 
 class AsexualReproduction(ReproductionStrategy):
     """Asexual reproduction (one parent → one offspring).
@@ -144,9 +172,8 @@ class AsexualReproduction(ReproductionStrategy):
 
         # Apply mutation if specified
         mutated = False
-        if random.random() < self.mutation_rate:
-            inherited_patterns = self._mutate_patterns(inherited_patterns)
-            mutated = True
+        inherited_patterns, mutated = self._mutate_patterns(inherited_patterns)
+        if mutated:
             logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent)
@@ -161,21 +188,6 @@ class AsexualReproduction(ReproductionStrategy):
 
         self._update_stats(mutated)
         return offspring
-
-    def _mutate_patterns(self, patterns: List[Dict]) -> List[Dict]:
-        """Apply mutation to patterns (add randomness).
-
-        Simple mutation: slightly adjust scores.
-        """
-        mutated = []
-        for pattern in patterns:
-            p = pattern.copy()
-            # Add small random noise to score
-            if 'score' in p:
-                noise = (random.random() - 0.5) * 1.0  # ±0.5
-                p['score'] = max(0, min(10, p['score'] + noise))
-            mutated.append(p)
-        return mutated
 
     def _create_offspring(
         self,
@@ -300,9 +312,8 @@ class SexualReproduction(ReproductionStrategy):
 
         # Apply mutation if specified
         mutated = False
-        if random.random() < self.mutation_rate:
-            inherited_patterns = self._mutate_patterns(inherited_patterns)
-            mutated = True
+        inherited_patterns, mutated = self._mutate_patterns(inherited_patterns)
+        if mutated:
             logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent1)
@@ -330,18 +341,6 @@ class SexualReproduction(ReproductionStrategy):
         # (e.g., interleave by rank, weighted sampling, etc.)
 
         return combined
-
-    def _mutate_patterns(self, patterns: List[Dict]) -> List[Dict]:
-        """Apply mutation to patterns."""
-        mutated = []
-        for pattern in patterns:
-            p = pattern.copy()
-            # Add small random noise to score
-            if 'score' in p:
-                noise = (random.random() - 0.5) * 1.5  # ±0.75 (stronger than asexual)
-                p['score'] = max(0, min(10, p['score'] + noise))
-            mutated.append(p)
-        return mutated
 
     def _create_offspring(
         self,
