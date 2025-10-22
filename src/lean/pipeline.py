@@ -192,6 +192,10 @@ class Pipeline:
 
         logger.info(f"[ENSEMBLE] Executing all {pool.size()} agents in {role} pool")
 
+        # Track memory usage for state
+        reasoning_count = 0
+        knowledge_count = 0
+
         # Execute all agents in the pool
         for agent in pool.agents:
             # Retrieve reasoning patterns for this agent
@@ -200,12 +204,31 @@ class Pipeline:
                 k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
             )
 
+            # Track for state (winner's counts will be used)
+            agent_reasoning_count = len(reasoning_patterns)
+
+            # Log retrieved reasoning patterns
+            logger.info(f"[MEMORY] {agent.agent_id} retrieved {agent_reasoning_count} reasoning patterns")
+            if reasoning_patterns:
+                for i, pattern in enumerate(reasoning_patterns[:3], 1):  # Show top 3
+                    inherited = pattern['metadata'].get('inherited', False)
+                    source = "inherited" if inherited else "personal"
+                    logger.info(
+                        f"  {i}. [{source}] score={pattern['score']:.1f}, "
+                        f"similarity={pattern['similarity']:.2f}, "
+                        f"tactic='{pattern.get('tactic', 'N/A')[:40]}'"
+                    )
+
             # Retrieve domain knowledge
             if domain_knowledge is None:
                 domain_knowledge = agent.shared_rag.retrieve(
                     query=topic,
                     k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
                 )
+                agent_knowledge_count = len(domain_knowledge)
+                logger.info(f"[MEMORY] {agent.agent_id} retrieved {agent_knowledge_count} domain knowledge items")
+            else:
+                agent_knowledge_count = len(domain_knowledge)
 
             # Generate with reasoning
             result = agent.generate_with_reasoning(
@@ -240,7 +263,9 @@ class Pipeline:
                 'agent_id': agent.agent_id,
                 'agent': agent,  # Keep for internal use
                 'result': result,
-                'score': score
+                'score': score,
+                'reasoning_count': agent_reasoning_count,
+                'knowledge_count': agent_knowledge_count
             })
 
         # Select best result
@@ -248,6 +273,8 @@ class Pipeline:
         winner_agent = best['agent']
         winner_result = best['result']
         winner_score = best['score']
+        winner_reasoning_count = best['reasoning_count']
+        winner_knowledge_count = best['knowledge_count']
 
         logger.info(f"[ENSEMBLE] Winner: {winner_agent.agent_id} with score {winner_score:.1f}")
 
@@ -267,7 +294,9 @@ class Pipeline:
             'all_results': results,  # For internal use (has agent objects)
             'serializable_results': serializable_results,  # For state storage
             'winner_id': winner_agent.agent_id,
-            'winner_score': winner_score
+            'winner_score': winner_score,
+            'reasoning_count': winner_reasoning_count,
+            'knowledge_count': winner_knowledge_count
         }
 
     def _build_graph(self) -> StateGraph:
@@ -451,6 +480,14 @@ class Pipeline:
         state['intro_ensemble_results'] = ensemble_result['serializable_results']
         state['intro_winner_id'] = ensemble_result['winner_id']
 
+        # Track memory usage for visualization
+        if 'reasoning_patterns_used' not in state:
+            state['reasoning_patterns_used'] = {}
+        if 'domain_knowledge_used' not in state:
+            state['domain_knowledge_used'] = {}
+        state['reasoning_patterns_used']['intro'] = ensemble_result['reasoning_count']
+        state['domain_knowledge_used']['intro'] = ensemble_result['knowledge_count']
+
         # Track timing
         end_time = time.time()
         state['agent_timings']['intro'] = {
@@ -510,6 +547,14 @@ class Pipeline:
         # Store ensemble metadata (serializable only)
         state['body_ensemble_results'] = ensemble_result['serializable_results']
         state['body_winner_id'] = ensemble_result['winner_id']
+
+        # Track memory usage for visualization
+        if 'reasoning_patterns_used' not in state:
+            state['reasoning_patterns_used'] = {}
+        if 'domain_knowledge_used' not in state:
+            state['domain_knowledge_used'] = {}
+        state['reasoning_patterns_used']['body'] = ensemble_result['reasoning_count']
+        state['domain_knowledge_used']['body'] = ensemble_result['knowledge_count']
 
         # Track timing
         end_time = time.time()
@@ -581,6 +626,14 @@ class Pipeline:
         # Store ensemble metadata (serializable only)
         state['conclusion_ensemble_results'] = ensemble_result['serializable_results']
         state['conclusion_winner_id'] = ensemble_result['winner_id']
+
+        # Track memory usage for visualization
+        if 'reasoning_patterns_used' not in state:
+            state['reasoning_patterns_used'] = {}
+        if 'domain_knowledge_used' not in state:
+            state['domain_knowledge_used'] = {}
+        state['reasoning_patterns_used']['conclusion'] = ensemble_result['reasoning_count']
+        state['domain_knowledge_used']['conclusion'] = ensemble_result['knowledge_count']
 
         # Track timing
         end_time = time.time()

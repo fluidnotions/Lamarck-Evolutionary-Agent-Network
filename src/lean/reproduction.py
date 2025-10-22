@@ -118,9 +118,11 @@ class AsexualReproduction(ReproductionStrategy):
         shared_rag: Optional['SharedRAG'] = None
     ) -> 'BaseAgent':
         """Create offspring from single parent."""
+        from loguru import logger
 
         # Get parent's reasoning patterns
         parent_patterns = parent1.reasoning_memory.get_all_reasoning()
+        logger.info(f"[INHERITANCE] {parent1.agent_id} has {len(parent_patterns)} total reasoning patterns")
 
         # Compact to best patterns
         max_inherited = int(os.getenv('INHERITED_REASONING_SIZE', '100'))
@@ -128,12 +130,24 @@ class AsexualReproduction(ReproductionStrategy):
             parent_patterns,
             max_size=max_inherited
         )
+        logger.info(f"[INHERITANCE] Compacted to {len(inherited_patterns)} patterns (strategy: {compaction_strategy.__class__.__name__})")
+
+        # Log inherited pattern details
+        if inherited_patterns:
+            inherited_count = sum(1 for p in inherited_patterns if p.get('metadata', {}).get('inherited', False))
+            personal_count = len(inherited_patterns) - inherited_count
+            avg_score = sum(p['score'] for p in inherited_patterns) / len(inherited_patterns)
+            logger.info(
+                f"[INHERITANCE] Patterns: {inherited_count} inherited from ancestors, "
+                f"{personal_count} personal, avg_score={avg_score:.2f}"
+            )
 
         # Apply mutation if specified
         mutated = False
         if random.random() < self.mutation_rate:
             inherited_patterns = self._mutate_patterns(inherited_patterns)
             mutated = True
+            logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent)
         offspring = self._create_offspring(
@@ -143,6 +157,7 @@ class AsexualReproduction(ReproductionStrategy):
             shared_rag=shared_rag or parent1.shared_rag,
             system_prompt=parent1.system_prompt
         )
+        logger.info(f"[INHERITANCE] Created offspring: {offspring.agent_id} from parent {parent1.agent_id}")
 
         self._update_stats(mutated)
         return offspring
@@ -245,18 +260,25 @@ class SexualReproduction(ReproductionStrategy):
         shared_rag: Optional['SharedRAG'] = None
     ) -> 'BaseAgent':
         """Create offspring from two parents with crossover."""
+        from loguru import logger
 
         if parent2 is None:
             # Fallback to asexual if only one parent
+            logger.warning(f"[INHERITANCE] Sexual reproduction requested but only one parent, falling back to asexual")
             asexual = AsexualReproduction(mutation_rate=self.mutation_rate)
             return asexual.reproduce(parent1, None, compaction_strategy, generation, shared_rag)
 
         # Get patterns from both parents
         p1_patterns = parent1.reasoning_memory.get_all_reasoning()
         p2_patterns = parent2.reasoning_memory.get_all_reasoning()
+        logger.info(
+            f"[INHERITANCE] Sexual reproduction: {parent1.agent_id} ({len(p1_patterns)} patterns) + "
+            f"{parent2.agent_id} ({len(p2_patterns)} patterns)"
+        )
 
         # Crossover: combine patterns
         combined_patterns = self._crossover(p1_patterns, p2_patterns)
+        logger.info(f"[INHERITANCE] Combined {len(combined_patterns)} total patterns from both parents")
 
         # Compact combined set to best patterns
         max_inherited = int(os.getenv('INHERITED_REASONING_SIZE', '100'))
@@ -264,12 +286,24 @@ class SexualReproduction(ReproductionStrategy):
             combined_patterns,
             max_size=max_inherited
         )
+        logger.info(f"[INHERITANCE] Compacted to {len(inherited_patterns)} patterns (strategy: {compaction_strategy.__class__.__name__})")
+
+        # Log inherited pattern details
+        if inherited_patterns:
+            inherited_count = sum(1 for p in inherited_patterns if p.get('metadata', {}).get('inherited', False))
+            personal_count = len(inherited_patterns) - inherited_count
+            avg_score = sum(p['score'] for p in inherited_patterns) / len(inherited_patterns)
+            logger.info(
+                f"[INHERITANCE] Patterns: {inherited_count} inherited from ancestors, "
+                f"{personal_count} personal, avg_score={avg_score:.2f}"
+            )
 
         # Apply mutation if specified
         mutated = False
         if random.random() < self.mutation_rate:
             inherited_patterns = self._mutate_patterns(inherited_patterns)
             mutated = True
+            logger.info(f"[INHERITANCE] Applied mutation (rate={self.mutation_rate})")
 
         # Create offspring (inherit system_prompt from parent1)
         offspring = self._create_offspring(
@@ -279,6 +313,7 @@ class SexualReproduction(ReproductionStrategy):
             shared_rag=shared_rag or parent1.shared_rag,
             system_prompt=parent1.system_prompt
         )
+        logger.info(f"[INHERITANCE] Created offspring: {offspring.agent_id} from parents {parent1.agent_id} + {parent2.agent_id}")
 
         self._update_stats(mutated)
         return offspring
