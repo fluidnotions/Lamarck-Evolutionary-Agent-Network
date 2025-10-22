@@ -8,6 +8,7 @@ This implements the 8-step reasoning cycle from the architecture refactor.
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Tuple
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from datetime import datetime
 import os
 import re
@@ -73,11 +74,8 @@ class BaseAgent(ABC):
         self.parent_ids = parent_ids or []
         self.system_prompt = system_prompt  # Store YAML prompt
 
-        # Initialize LLM
-        self.llm = ChatAnthropic(
-            model=os.getenv("MODEL_NAME", "claude-3-5-sonnet-20241022"),
-            temperature=float(os.getenv("BASE_TEMPERATURE", "0.7")),
-        )
+        # Initialize LLM based on provider
+        self.llm = self._initialize_llm()
 
         # Fitness tracking (output quality)
         self.fitness_history: List[float] = []
@@ -87,6 +85,31 @@ class BaseAgent(ABC):
         # Pending storage
         self.pending_reasoning: Optional[Dict] = None
         self.pending_output: Optional[Dict] = None
+
+    def _initialize_llm(self):
+        """Initialize LLM based on LLM_PROVIDER environment variable.
+
+        Returns:
+            Initialized LLM client (ChatAnthropic or ChatOpenAI)
+        """
+        provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+        temperature = float(os.getenv("BASE_TEMPERATURE", "0.7"))
+
+        if provider == "openai":
+            model_name = os.getenv("MODEL_NAME", "gpt-4-turbo-preview")
+            return ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        elif provider == "anthropic":
+            model_name = os.getenv("MODEL_NAME", "claude-3-5-sonnet-20241022")
+            return ChatAnthropic(
+                model=model_name,
+                temperature=temperature,
+            )
+        else:
+            raise ValueError(f"Unsupported LLM provider: {provider}. Use 'anthropic' or 'openai'.")
 
     def generate_with_reasoning(
         self,
