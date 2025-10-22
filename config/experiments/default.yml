@@ -116,6 +116,8 @@ topic_blocks:
 
 # Model & Agent Configuration
 model:
+  provider: "anthropic"
+  model_name: "claude-3-5-sonnet-20241022"
   base_temperature: 0.7
   embedding_model: "all-MiniLM-L6-v2"
 
@@ -126,6 +128,12 @@ memory:
   inherited_reasoning_size: 100
   score_threshold: 9.0
   shared_rag_min_score: 8.0
+
+# Pipeline Feature Flags
+pipeline:
+  enable_specialists: true
+  enable_revision: true
+  max_revisions: 2
 
 # Research settings for Tavily integration
 research:

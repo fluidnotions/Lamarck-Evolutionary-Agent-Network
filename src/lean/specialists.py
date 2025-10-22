@@ -7,7 +7,7 @@ These agents provide specialized support to content agents:
 - StylistAgent: Clarity and readability enhancement
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from lean.base_agent import BaseAgent
 from lean.reasoning_memory import ReasoningMemory
 from lean.shared_rag import SharedRAG
@@ -290,7 +290,9 @@ def create_specialist_agents(
     reasoning_dir: str = "./data/reasoning",
     shared_rag: Optional[SharedRAG] = None,
     agent_ids: Optional[Dict[str, str]] = None,
-    agent_prompts: Optional[Dict[str, str]] = None
+    agent_prompts: Optional[Dict[str, str]] = None,
+    model_config: Optional[Dict[str, Any]] = None,
+    memory_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, BaseAgent]:
     """Create specialist agents.
 
@@ -306,8 +308,16 @@ def create_specialist_agents(
     from lean.reasoning_memory import ReasoningMemory, generate_reasoning_collection_name
 
     # Use provided shared_rag or create new one
+    model_config = model_config or {}
+    memory_config = memory_config or {}
+
     if shared_rag is None:
-        shared_rag = SharedRAG(persist_directory="./data/shared_rag")
+        shared_rag = SharedRAG(
+            persist_directory="./data/shared_rag",
+            embedding_model=model_config.get('embedding_model'),
+            max_retrieve=memory_config.get('max_knowledge_retrieve'),
+            min_quality_score=memory_config.get('shared_rag_min_score'),
+        )
 
     # Default agent IDs
     if agent_ids is None:
@@ -327,42 +337,51 @@ def create_specialist_agents(
     researcher_collection = generate_reasoning_collection_name('researcher', agent_ids['researcher'])
     researcher_memory = ReasoningMemory(
         collection_name=researcher_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     specialists['researcher'] = ResearcherAgent(
         role='researcher',
         agent_id=f"researcher_{agent_ids['researcher']}",
         reasoning_memory=researcher_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('researcher')
+        system_prompt=agent_prompts.get('researcher'),
+        llm_config=model_config
     )
 
     # Create fact-checker agent
     fact_checker_collection = generate_reasoning_collection_name('fact_checker', agent_ids['fact_checker'])
     fact_checker_memory = ReasoningMemory(
         collection_name=fact_checker_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     specialists['fact_checker'] = FactCheckerAgent(
         role='fact_checker',
         agent_id=f"fact_checker_{agent_ids['fact_checker']}",
         reasoning_memory=fact_checker_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('fact_checker')
+        system_prompt=agent_prompts.get('fact_checker'),
+        llm_config=model_config
     )
 
     # Create stylist agent
     stylist_collection = generate_reasoning_collection_name('stylist', agent_ids['stylist'])
     stylist_memory = ReasoningMemory(
         collection_name=stylist_collection,
-        persist_directory=reasoning_dir
+        persist_directory=reasoning_dir,
+        embedding_model=model_config.get('embedding_model'),
+        max_retrieve=memory_config.get('max_reasoning_retrieve'),
     )
     specialists['stylist'] = StylistAgent(
         role='stylist',
         agent_id=f"stylist_{agent_ids['stylist']}",
         reasoning_memory=stylist_memory,
         shared_rag=shared_rag,
-        system_prompt=agent_prompts.get('stylist')
+        system_prompt=agent_prompts.get('stylist'),
+        llm_config=model_config
     )
 
     return specialists

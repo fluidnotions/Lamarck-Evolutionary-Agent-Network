@@ -27,7 +27,7 @@ Usage:
     )
 """
 
-from typing import Dict, List, Optional, Literal, Tuple
+from typing import Dict, List, Optional, Literal, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
 import os
@@ -416,26 +416,27 @@ class HumanInTheLoop:
 
 
 # Convenience function for environment-based HITL config
-def create_hitl_from_env() -> HumanInTheLoop:
-    """Create HITL instance from environment variables.
+def create_hitl_from_env(hitl_config: Optional[Dict[str, Any]] = None) -> HumanInTheLoop:
+    """Create HITL instance from configuration with environment fallback.
 
-    Environment variables:
-        ENABLE_HITL: "true" or "false" (default: false)
-        HITL_REVIEW_POINTS: Comma-separated list (e.g., "content,scoring")
-        HITL_AUTO_APPROVE: "true" or "false" (default: false)
-        HITL_VERBOSE: "true" or "false" (default: true)
+    Args:
+        hitl_config: Configuration dictionary from experiment YAML.
 
     Returns:
         Configured HumanInTheLoop instance
     """
-    enabled = os.getenv("ENABLE_HITL", "false").lower() == "true"
-    auto_approve = os.getenv("HITL_AUTO_APPROVE", "false").lower() == "true"
-    verbose = os.getenv("HITL_VERBOSE", "true").lower() == "true"
+    hitl_config = hitl_config or {}
 
-    review_points_str = os.getenv("HITL_REVIEW_POINTS", "")
+    enabled = bool(hitl_config.get('enabled', False))
+    auto_approve = bool(hitl_config.get('auto_approve', False))
+    verbose = bool(hitl_config.get('verbose', True))
+
+    review_points_value = hitl_config.get('review_points', "")
     review_points = None
-    if review_points_str:
-        review_points = [p.strip() for p in review_points_str.split(",")]
+    if isinstance(review_points_value, str) and review_points_value:
+        review_points = [p.strip() for p in review_points_value.split(",")]
+    elif isinstance(review_points_value, list):
+        review_points = review_points_value
 
     return HumanInTheLoop(
         enabled=enabled,

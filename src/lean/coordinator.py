@@ -7,7 +7,7 @@ This agent implements the coordinator role from the 3-layer architecture:
 - Layer 3: Specialist agents (researcher, fact-checker, stylist)
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from lean.base_agent import BaseAgent
 from lean.reasoning_memory import ReasoningMemory
 from lean.shared_rag import SharedRAG
@@ -36,7 +36,8 @@ class CoordinatorAgent(BaseAgent):
         shared_rag: SharedRAG,
         parent_ids: Optional[List[str]] = None,
         enable_research: bool = True,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        llm_config: Optional[Dict[str, Any]] = None
     ):
         """Initialize coordinator agent.
 
@@ -54,7 +55,8 @@ class CoordinatorAgent(BaseAgent):
             reasoning_memory=reasoning_memory,
             shared_rag=shared_rag,
             parent_ids=parent_ids,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            llm_config=llm_config
         )
 
         self.enable_research = enable_research

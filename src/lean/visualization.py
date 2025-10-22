@@ -11,7 +11,6 @@ from rich.layout import Layout
 from rich.panel import Panel
 from rich.text import Text
 from typing import Dict, List, AsyncIterator
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,12 +47,10 @@ class StreamVisualizer:
     - Activity logs
     """
 
-    def __init__(self):
+    def __init__(self, enabled: bool = True):
         """Initialize visualizer."""
         self.console = Console()
-        self.show_visualization = (
-            os.getenv("ENABLE_VISUALIZATION", "true").lower() == "true"
-        )
+        self.show_visualization = enabled
 
     def create_status_table(self, state: BlogState) -> Table:
         """Create status table for current execution.
@@ -319,13 +316,13 @@ class HierarchicalVisualizer(StreamVisualizer):
     - Revision loop progress
     """
 
-    def __init__(self, pipeline=None):
+    def __init__(self, pipeline=None, enabled: bool = True):
         """Initialize hierarchical visualizer.
 
         Args:
             pipeline: Pipeline instance (provides access to pools, coordinator, specialists)
         """
-        super().__init__()
+        super().__init__(enabled=enabled)
         self.pipeline = pipeline
 
     def create_status_table(self, state: BlogState) -> Table:

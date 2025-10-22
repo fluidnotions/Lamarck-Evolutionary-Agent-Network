@@ -18,7 +18,6 @@ Flow:
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from typing import Dict, AsyncIterator, Optional, List
-import os
 from dotenv import load_dotenv
 import time
 
@@ -35,6 +34,7 @@ from lean.visualization import HierarchicalVisualizer
 from lean.agent_pool import AgentPool
 from lean.reproduction import SexualReproduction
 from loguru import logger
+from lean.config_loader import ExperimentConfig
 
 
 
@@ -53,7 +53,8 @@ class Pipeline:
         enable_specialists: bool = True,
         enable_revision: bool = True,
         max_revisions: int = 2,
-        agent_prompts: Optional[Dict[str, str]] = None
+        agent_prompts: Optional[Dict[str, str]] = None,
+        experiment_config: Optional[ExperimentConfig] = None
     ):
         """Initialize LEAN pipeline with hierarchical architecture.
 
@@ -78,13 +79,35 @@ class Pipeline:
         self.enable_revision = enable_revision
         self.max_revisions = max_revisions
         self.agent_prompts = agent_prompts or {}
+        self.experiment_config = experiment_config
+
+        # Extract configuration helpers
+        model_config = (experiment_config.model_config if experiment_config else {}) or {}
+        memory_config = (experiment_config.memory_config if experiment_config else {}) or {}
+        research_config = (experiment_config.research_config if experiment_config else {}) or {}
+        pipeline_config = (experiment_config.pipeline_config if experiment_config else {}) or {}
+        visualization_config = (experiment_config.visualization_config if experiment_config else {}) or {}
+
+        self.model_config = model_config
+        self.memory_config = memory_config
+        self.research_config = research_config
+        self.pipeline_config = pipeline_config
+        self.visualization_config = visualization_config
+
+        self.max_reasoning_retrieve = int(memory_config.get('max_reasoning_retrieve', 5))
+        self.max_knowledge_retrieve = int(memory_config.get('max_knowledge_retrieve', 3))
+        self.inherited_reasoning_size = int(memory_config.get('inherited_reasoning_size', 100))
+        self.shared_rag_min_score = float(memory_config.get('shared_rag_min_score', 8.0))
+        self.visualization_enabled = bool(visualization_config.get('enabled', True))
 
         # Create content agents
         content_agents = create_agents(
             reasoning_dir=reasoning_dir,
             shared_rag_dir=shared_rag_dir,
             agent_ids=agent_ids,
-            agent_prompts=self.agent_prompts
+            agent_prompts=self.agent_prompts,
+            model_config=model_config,
+            memory_config=memory_config,
         )
 
         # Store shared_rag reference for evolution and specialists
@@ -97,14 +120,17 @@ class Pipeline:
         )
         coordinator_memory = ReasoningMemory(
             collection_name=coordinator_collection,
-            persist_directory=reasoning_dir
+            persist_directory=reasoning_dir,
+            embedding_model=model_config.get('embedding_model'),
+            max_retrieve=self.max_reasoning_retrieve,
         )
         self.coordinator = CoordinatorAgent(
             agent_id='coordinator_1',
             reasoning_memory=coordinator_memory,
             shared_rag=self.shared_rag,
             enable_research=enable_research,
-            system_prompt=self.agent_prompts.get('coordinator')
+            system_prompt=self.agent_prompts.get('coordinator'),
+            llm_config=self.model_config
         )
 
         # Create specialist agents (if enabled)
@@ -112,13 +138,20 @@ class Pipeline:
             self.specialists = create_specialist_agents(
                 reasoning_dir=reasoning_dir,
                 shared_rag=self.shared_rag,
-                agent_prompts=self.agent_prompts
+                agent_prompts=self.agent_prompts,
+                model_config=model_config,
+                memory_config=memory_config,
             )
         else:
             self.specialists = None
 
         # Initialize reproduction strategy
-        self.reproduction_strategy = SexualReproduction()
+        self.reproduction_strategy = SexualReproduction(
+            inherited_reasoning_size=self.inherited_reasoning_size,
+            embedding_model=model_config.get('embedding_model'),
+            max_reasoning_retrieve=self.max_reasoning_retrieve,
+            llm_config=self.model_config,
+        )
 
         # Initialize context manager
         self.context_manager = ContextManager(
@@ -130,7 +163,10 @@ class Pipeline:
 
         # Initialize evaluator and visualizer
         self.evaluator = ContentEvaluator()
-        self.visualizer = HierarchicalVisualizer(pipeline=self)
+        self.visualizer = HierarchicalVisualizer(
+            pipeline=self,
+            enabled=self.visualization_enabled
+        )
 
         # Create agent pools with initial population
         # For ensemble competition, we need multiple agents per role
@@ -144,42 +180,51 @@ class Pipeline:
             intro_collection = generate_reasoning_collection_name('intro', f'agent_{i+1}')
             intro_memory = ReasoningMemory(
                 collection_name=intro_collection,
-                persist_directory=reasoning_dir
+                persist_directory=reasoning_dir,
+                embedding_model=self.model_config.get('embedding_model'),
+                max_retrieve=self.max_reasoning_retrieve,
             )
             intro_agents.append(IntroAgent(
                 role='intro',
                 agent_id=f'intro_agent_{i+1}',
                 reasoning_memory=intro_memory,
                 shared_rag=self.shared_rag,
-                system_prompt=self.agent_prompts.get('intro', '')
+                system_prompt=self.agent_prompts.get('intro', ''),
+                llm_config=self.model_config
             ))
 
             # Body agents
             body_collection = generate_reasoning_collection_name('body', f'agent_{i+1}')
             body_memory = ReasoningMemory(
                 collection_name=body_collection,
-                persist_directory=reasoning_dir
+                persist_directory=reasoning_dir,
+                embedding_model=self.model_config.get('embedding_model'),
+                max_retrieve=self.max_reasoning_retrieve,
             )
             body_agents.append(BodyAgent(
                 role='body',
                 agent_id=f'body_agent_{i+1}',
                 reasoning_memory=body_memory,
                 shared_rag=self.shared_rag,
-                system_prompt=self.agent_prompts.get('body', '')
+                system_prompt=self.agent_prompts.get('body', ''),
+                llm_config=self.model_config
             ))
 
             # Conclusion agents
             conclusion_collection = generate_reasoning_collection_name('conclusion', f'agent_{i+1}')
             conclusion_memory = ReasoningMemory(
                 collection_name=conclusion_collection,
-                persist_directory=reasoning_dir
+                persist_directory=reasoning_dir,
+                embedding_model=self.model_config.get('embedding_model'),
+                max_retrieve=self.max_reasoning_retrieve,
             )
             conclusion_agents.append(ConclusionAgent(
                 role='conclusion',
                 agent_id=f'conclusion_agent_{i+1}',
                 reasoning_memory=conclusion_memory,
                 shared_rag=self.shared_rag,
-                system_prompt=self.agent_prompts.get('conclusion', '')
+                system_prompt=self.agent_prompts.get('conclusion', ''),
+                llm_config=self.model_config
             ))
 
         # Create agent pools with full population
@@ -250,7 +295,7 @@ class Pipeline:
             # Retrieve reasoning patterns for this agent
             reasoning_patterns = agent.reasoning_memory.retrieve_similar_reasoning(
                 query=topic,
-                k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
+                k=self.max_reasoning_retrieve
             )
 
             # Track for state (winner's counts will be used)
@@ -272,7 +317,7 @@ class Pipeline:
             if domain_knowledge is None:
                 domain_knowledge = agent.shared_rag.retrieve(
                     query=topic,
-                    k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
+                    k=self.max_knowledge_retrieve
                 )
                 agent_knowledge_count = len(domain_knowledge)
                 logger.info(f"[MEMORY] {agent.agent_id} retrieved {agent_knowledge_count} domain knowledge items")
@@ -424,8 +469,8 @@ class Pipeline:
         # Research topic
         research_results = self.coordinator.research_topic(
             topic=topic,
-            max_results=int(os.getenv('TAVILY_MAX_RESULTS', '5')),
-            search_depth=os.getenv('TAVILY_SEARCH_DEPTH', 'advanced')
+            max_results=int(self.research_config.get('max_results', 5)),
+            search_depth=self.research_config.get('search_depth', 'advanced')
         )
 
         # Store research results in state
@@ -461,13 +506,13 @@ class Pipeline:
         # Retrieve reasoning patterns for coordinator
         reasoning_patterns = self.coordinator.reasoning_memory.retrieve_similar_reasoning(
             query=state['topic'],
-            k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
+            k=self.max_reasoning_retrieve
         )
 
         # Retrieve domain knowledge
         domain_knowledge = self.coordinator.shared_rag.retrieve(
             query=state['topic'],
-            k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
+            k=self.max_knowledge_retrieve
         )
 
         # Synthesize research into contexts
@@ -1040,7 +1085,7 @@ class Pipeline:
         # Stream execution
         final_state = initial_state
 
-        if os.getenv("ENABLE_VISUALIZATION", "true").lower() == "true":
+        if self.visualization_enabled:
             async def state_stream() -> AsyncIterator[BlogState]:
                 nonlocal final_state
                 async for event in self.app.astream(
