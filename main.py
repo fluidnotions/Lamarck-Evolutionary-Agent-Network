@@ -123,16 +123,17 @@ async def main(config_name: str = "default"):
 
     # Execute generations
     for gen_num, topic_config in enumerate(topics, start=1):
-        topic = topic_config.title
+        # topic_config is a TopicConfig object, get its title attribute
+        topic = topic_config.title if hasattr(topic_config, 'title') and isinstance(topic_config.title, str) else str(topic_config.title) if callable(topic_config.title) else str(topic_config)
 
         print(f"\n{'='*70}")
         print(f"Generation {gen_num}/{len(topics)}")
         print(f"Topic: {topic}")
 
         # Show topic metadata
-        if topic_config.keywords:
+        if hasattr(topic_config, 'keywords') and topic_config.keywords:
             print(f"Keywords: {', '.join(topic_config.keywords)}")
-        if topic_config.difficulty:
+        if hasattr(topic_config, 'difficulty') and topic_config.difficulty:
             print(f"Difficulty: {topic_config.difficulty}")
 
         print(f"{'='*70}\n")
