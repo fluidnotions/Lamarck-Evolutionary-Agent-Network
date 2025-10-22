@@ -13,6 +13,9 @@ Implements 40/30/20/10 weighted distribution:
 from typing import List, Dict, Optional
 import random
 import time
+from lean.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ContextManager:
@@ -306,7 +309,7 @@ class ContextManager:
                 return recent['reasoning']  # NOT 'content' - this is the <think> section
         except AttributeError:
             # Fallback if agent doesn't have reasoning_memory
-            print(f"[Warning] Agent {agent.agent_id} missing reasoning_memory")
+            logger.warning(f"Agent {agent.agent_id} missing reasoning_memory")
             return ""
 
         return ""
@@ -422,4 +425,4 @@ class ContextManager:
         with open(filepath, 'w') as f:
             json.dump(serializable_history, f, indent=2)
 
-        print(f"Context flow data exported to {filepath}")
+        logger.info(f"Context flow data exported to {filepath}")

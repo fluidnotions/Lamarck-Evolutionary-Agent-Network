@@ -11,10 +11,13 @@ from typing import List, Dict, Optional
 from lean.base_agent import BaseAgent
 from lean.reasoning_memory import ReasoningMemory
 from lean.shared_rag import SharedRAG
+from lean.logger import get_logger
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = get_logger(__name__)
 
 
 class CoordinatorAgent(BaseAgent):
@@ -67,16 +70,16 @@ class CoordinatorAgent(BaseAgent):
         tavily_api_key = os.getenv('TAVILY_API_KEY')
 
         if not tavily_api_key:
-            print("[Warning] TAVILY_API_KEY not found, research disabled")
+            logger.warning("TAVILY_API_KEY not found, research disabled")
             self.enable_research = False
             return
 
         try:
             from tavily import TavilyClient
             self.tavily_client = TavilyClient(api_key=tavily_api_key)
-            print("[Coordinator] Tavily research enabled")
+            logger.info("Tavily research enabled for coordinator")
         except ImportError:
-            print("[Warning] Tavily package not installed, research disabled")
+            logger.warning("Tavily package not installed, research disabled")
             self.enable_research = False
 
     def research_topic(
@@ -128,7 +131,7 @@ class CoordinatorAgent(BaseAgent):
             }
 
         except Exception as e:
-            print(f"[Coordinator] Tavily research error: {e}")
+            logger.error(f"Tavily research error: {e}")
             return {
                 'query': topic,
                 'results': [],

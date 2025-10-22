@@ -92,6 +92,14 @@ class BlogState(TypedDict):
     domain_knowledge_used: Dict[str, int]  # {role: count} - knowledge items retrieved
     generation_number: int  # Which generation in the sequence (for M2)
 
+    # NEW: Ensemble competition results
+    intro_ensemble_results: List[Dict[str, Any]]  # All intro agent results with scores
+    body_ensemble_results: List[Dict[str, Any]]  # All body agent results with scores
+    conclusion_ensemble_results: List[Dict[str, Any]]  # All conclusion agent results with scores
+    intro_winner_id: str  # ID of winning intro agent
+    body_winner_id: str  # ID of winning body agent
+    conclusion_winner_id: str  # ID of winning conclusion agent
+
 
 class AgentOutput(TypedDict):
     """Output from an agent with metadata."""
@@ -166,6 +174,12 @@ def create_initial_state(topic: str) -> BlogState:
         reasoning_patterns_used={},
         domain_knowledge_used={},
         generation_number=0,
+        intro_ensemble_results=[],
+        body_ensemble_results=[],
+        conclusion_ensemble_results=[],
+        intro_winner_id="",
+        body_winner_id="",
+        conclusion_winner_id="",
     )
 
 

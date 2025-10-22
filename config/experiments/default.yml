@@ -21,7 +21,6 @@ topic_blocks:
   - name: "AI Fundamentals"
     description: "Core AI and ML concepts (pre-evolution baseline)"
     generation_range: [1, 4]
-    documentation: "config/docs/ai-fundamentals.md"
     topics:
       - title: "The Future of Artificial Intelligence"
         keywords: ["AI", "future", "technology", "innovation"]
@@ -42,7 +41,6 @@ topic_blocks:
   - name: "Healthcare AI Applications"
     description: "AI in medical and healthcare contexts (post-evolution gen 5)"
     generation_range: [5, 9]
-    documentation: "config/docs/healthcare-ai.md"
     topics:
       - title: "AI in Healthcare Applications"
         keywords: ["healthcare", "medical AI", "diagnosis", "treatment"]
@@ -67,7 +65,6 @@ topic_blocks:
   - name: "AI Ethics and Governance"
     description: "Ethical considerations and responsible AI (post-evolution gen 10)"
     generation_range: [10, 14]
-    documentation: "config/docs/ai-ethics.md"
     topics:
       - title: "The Ethics of Artificial Intelligence"
         keywords: ["ethics", "AI", "responsibility", "society"]
@@ -92,7 +89,6 @@ topic_blocks:
   - name: "Climate and Environmental AI"
     description: "AI for climate science and sustainability (post-evolution gen 15)"
     generation_range: [15, 20]
-    documentation: "config/docs/climate-ai.md"
     topics:
       - title: "Climate Change and AI Solutions"
         keywords: ["climate change", "AI", "sustainability", "solutions"]

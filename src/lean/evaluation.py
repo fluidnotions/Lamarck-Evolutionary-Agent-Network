@@ -69,6 +69,27 @@ class ContentEvaluator:
 
         return state
 
+    def score_section(self, content: str, section_type: str, topic: str, intro: str = "") -> float:
+        """Score a single section individually (for ensemble competition).
+
+        Args:
+            content: The content to score
+            section_type: Type of section ('intro', 'body', or 'conclusion')
+            topic: The topic being written about
+            intro: Introduction text (needed for conclusion scoring)
+
+        Returns:
+            Score from 0-10
+        """
+        if section_type == 'intro':
+            return self._score_intro(content, topic)
+        elif section_type == 'body':
+            return self._score_body(content, topic)
+        elif section_type == 'conclusion':
+            return self._score_conclusion(content, topic, intro)
+        else:
+            raise ValueError(f"Unknown section type: {section_type}")
+
     def _score_intro(self, intro: str, topic: str) -> float:
         """Score introduction section.
 

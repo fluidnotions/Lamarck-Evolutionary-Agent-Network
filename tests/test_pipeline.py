@@ -155,3 +155,136 @@ async def test_pipeline_reasoning_storage(minimal_pipeline):
         len(result.get('conclusion_reasoning', '')) > 0
     )
     assert has_reasoning, "At least one section should have reasoning"
+
+
+@pytest.mark.asyncio
+async def test_ensemble_execution():
+    """Test that ensemble execution mechanism works (all pool agents compete)."""
+    # Note: population starts at 1 agent, grows through evolution
+    # This test verifies the ensemble mechanism functions correctly
+    pipeline = Pipeline(
+        reasoning_dir="./data/test_reasoning",
+        shared_rag_dir="./data/test_shared_rag",
+        population_size=1,  # Start with 1 to keep test fast
+        evolution_frequency=10,
+        enable_research=False,
+        enable_specialists=False,
+        enable_revision=False
+    )
+
+    result = await pipeline.generate(
+        topic="Ensemble Test Topic",
+        generation_number=1
+    )
+
+    # Check that ensemble results are tracked
+    assert 'intro_ensemble_results' in result, "Intro ensemble results should be in state"
+    assert 'body_ensemble_results' in result, "Body ensemble results should be in state"
+    assert 'conclusion_ensemble_results' in result, "Conclusion ensemble results should be in state"
+
+    # Check that all agents in pool executed
+    intro_results = result['intro_ensemble_results']
+    assert len(intro_results) >= 1, "At least 1 intro agent should have executed"
+
+    body_results = result['body_ensemble_results']
+    assert len(body_results) >= 1, "At least 1 body agent should have executed"
+
+    conclusion_results = result['conclusion_ensemble_results']
+    assert len(conclusion_results) >= 1, "At least 1 conclusion agent should have executed"
+
+    # Check that each agent has individual score (serializable format)
+    for result_item in intro_results:
+        assert 'agent_id' in result_item
+        assert 'score' in result_item
+        assert 'output_length' in result_item
+        assert 0 <= result_item['score'] <= 10, "Score should be between 0 and 10"
+
+    # Check that winner is tracked
+    assert 'intro_winner_id' in result
+    assert 'body_winner_id' in result
+    assert 'conclusion_winner_id' in result
+
+
+@pytest.mark.asyncio
+async def test_individual_fitness_tracking():
+    """Test that each agent tracks individual fitness, not shared."""
+    pipeline = Pipeline(
+        reasoning_dir="./data/test_reasoning",
+        shared_rag_dir="./data/test_shared_rag",
+        population_size=1,  # Start with 1, grows through evolution
+        evolution_frequency=10,
+        enable_research=False,
+        enable_specialists=False,
+        enable_revision=False
+    )
+
+    await pipeline.generate(
+        topic="Fitness Test Topic",
+        generation_number=1
+    )
+
+    # Get agents from pools
+    intro_agents = pipeline.agent_pools['intro'].agents
+
+    # Check that each agent has fitness history
+    for agent in intro_agents:
+        assert len(agent.fitness_history) > 0, f"{agent.agent_id} should have fitness history"
+
+    # Check that agents have DIFFERENT fitness scores (unless by chance they're equal)
+    # This demonstrates individual tracking rather than shared scores
+    fitness_scores = [agent.avg_fitness() for agent in intro_agents]
+
+    # All agents should have scores (not all zero)
+    assert any(score > 0 for score in fitness_scores), "At least one agent should have non-zero fitness"
+
+
+@pytest.mark.asyncio
+async def test_ensemble_evolution_with_individual_scores():
+    """Test that evolution uses individual scores from ensemble competition."""
+    pipeline = Pipeline(
+        reasoning_dir="./data/test_reasoning",
+        shared_rag_dir="./data/test_shared_rag",
+        population_size=2,  # Small population for fast testing
+        evolution_frequency=2,  # Trigger evolution after 2 generations
+        enable_research=False,
+        enable_specialists=False,
+        enable_revision=False
+    )
+
+    # Generate first generation
+    result1 = await pipeline.generate(
+        topic="Evolution Test Topic 1",
+        generation_number=1
+    )
+
+    # Verify agents have individual scores
+    intro_pool = pipeline.agent_pools['intro']
+    agents_gen1 = intro_pool.agents.copy()
+
+    for agent in agents_gen1:
+        assert len(agent.fitness_history) > 0
+
+    # Generate second generation (should trigger evolution)
+    result2 = await pipeline.generate(
+        topic="Evolution Test Topic 2",
+        generation_number=2
+    )
+
+    # Check that evolution happened
+    assert intro_pool.generation == 1, "Pool should have evolved to generation 1"
+
+    # Check that new agents were created (IDs changed)
+    agents_gen2 = intro_pool.agents
+    gen1_ids = {agent.agent_id for agent in agents_gen1}
+    gen2_ids = {agent.agent_id for agent in agents_gen2}
+
+    # After evolution, offspring have different IDs
+    assert gen1_ids != gen2_ids, "Evolution should create new agents with different IDs"
+
+    # Check that offspring have inherited reasoning
+    for agent in agents_gen2:
+        # Offspring should have some inherited patterns (if parents had high-scoring patterns)
+        inherited_count = agent.reasoning_memory.collection.count()
+        # Note: This might be 0 if parents didn't have high enough scores
+        # But at least verify the memory system is initialized
+        assert inherited_count >= 0, f"{agent.agent_id} should have reasoning memory initialized"

@@ -16,13 +16,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Import logging
+from lean.logger import get_logger
+logger = get_logger(__name__)
+
 # Import new memory classes
 try:
     from lean.reasoning_memory import ReasoningMemory
     from lean.shared_rag import SharedRAG
 except ImportError:
     # Fallback for development
-    print("[Warning] ReasoningMemory/SharedRAG not found, using placeholders")
+    logger.warning("ReasoningMemory/SharedRAG not found, using placeholders")
 
     class ReasoningMemory:
         def retrieve_similar(self, query: str, k: int = 5) -> List[Dict]:
@@ -314,7 +318,7 @@ Now complete the task:"""
 
         # Fallback: if no tags found, treat entire response as output
         if not thinking and not output:
-            print(f"[Warning] No <think>/<final> tags found in response for {self.role}")
+            logger.warning(f"No <think>/<final> tags found in response for {self.role}")
             thinking = "No reasoning provided"
             output = response_text
 
@@ -377,7 +381,8 @@ Now complete the task:"""
             score: Quality score from evaluator
         """
         if self.pending_reasoning is None:
-            print(f"[Warning] No pending reasoning to store for {self.agent_id}")
+            # This is expected for agents in a pool that didn't execute this generation
+            logger.debug(f"No pending reasoning to store for {self.agent_id} (did not execute this generation)")
             return
 
         # Store reasoning pattern (always, no threshold)

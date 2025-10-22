@@ -11,8 +11,11 @@ from dotenv import load_dotenv
 import hashlib
 import json
 from datetime import datetime, timedelta
+from lean.logger import get_logger
 
 load_dotenv()
+
+logger = get_logger(__name__)
 
 # Conditional import - tavily may not be installed yet
 try:
@@ -91,10 +94,10 @@ class TavilySearchManager:
         self.api_key = api_key or os.getenv("TAVILY_API_KEY")
 
         if not TAVILY_AVAILABLE:
-            print("[Warning] Tavily package not installed. Web search disabled.")
+            logger.warning("Tavily package not installed. Web search disabled.")
             self.client = None
         elif not self.api_key:
-            print("[Warning] TAVILY_API_KEY not found. Web search disabled.")
+            logger.warning("TAVILY_API_KEY not found. Web search disabled.")
             self.client = None
         else:
             self.client = TavilyClient(api_key=self.api_key)

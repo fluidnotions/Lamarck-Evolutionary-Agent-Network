@@ -25,8 +25,17 @@ from dotenv import load_dotenv
 
 from src.lean.pipeline import Pipeline
 from src.lean.config_loader import load_config
+from src.lean.logger import setup_logger
 
 load_dotenv()
+
+# Initialize logging (file-based, no console spam)
+logger = setup_logger(
+    name="lean",
+    log_dir="./logs",
+    log_level=os.getenv("LOG_LEVEL", "INFO"),
+    console_output=False  # Don't spam console, logs go to files only
+)
 
 
 async def main(config_name: str = "default"):
@@ -40,6 +49,8 @@ async def main(config_name: str = "default"):
     print("  LEAN: Lamarck Evolutionary Agent Network")
     print("  Hierarchical Coordinator Architecture")
     print("="*70 + "\n")
+
+    logger.info("Starting LEAN experiment with hierarchical architecture")
 
     # Check for API key
     if not os.getenv("ANTHROPIC_API_KEY"):

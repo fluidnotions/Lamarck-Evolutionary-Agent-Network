@@ -17,6 +17,9 @@ import os
 import time
 from datetime import datetime
 from dotenv import load_dotenv
+from lean.logger import get_logger
+
+logger = get_logger(__name__)
 
 load_dotenv()
 
@@ -177,7 +180,7 @@ class SharedRAG:
                 where=where_filter
             )
         except Exception as e:
-            print(f"[Warning] Shared RAG retrieval error: {e}")
+            logger.warning(f"Shared RAG retrieval error: {e}")
             return []
 
         if not results['documents'][0]:

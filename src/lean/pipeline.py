@@ -34,6 +34,9 @@ from lean.evaluation import ContentEvaluator
 from lean.visualization import HierarchicalVisualizer
 from lean.agent_pool import AgentPool
 from lean.reproduction import SexualReproduction
+from lean.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Pipeline:
@@ -151,6 +154,121 @@ class Pipeline:
 
         # Build LangGraph
         self.app = self._build_graph()
+
+    def _execute_ensemble(
+        self,
+        role: str,
+        topic: str,
+        reasoning_context: str,
+        additional_context: str,
+        generation_number: int,
+        domain_knowledge: Optional[List[Dict]] = None
+    ) -> Dict:
+        """Execute all agents in a pool and select the best output.
+
+        This implements true ensemble execution:
+        1. All agents in the pool generate outputs in parallel
+        2. Each output is scored individually
+        3. Best output is selected for use
+        4. All agents store their reasoning with individual scores
+
+        Args:
+            role: Agent role (intro, body, conclusion)
+            topic: Topic to generate about
+            reasoning_context: Context from previous agents
+            additional_context: Coordinator or specialist context
+            generation_number: Current generation number
+            domain_knowledge: Optional domain knowledge to inject
+
+        Returns:
+            Dict with:
+                - output: Best output selected
+                - thinking: Best agent's thinking
+                - all_results: List of (agent, result, score) tuples
+                - winner_id: ID of winning agent
+        """
+        pool = self.agent_pools[role]
+        results = []
+
+        logger.info(f"[ENSEMBLE] Executing all {pool.size()} agents in {role} pool")
+
+        # Execute all agents in the pool
+        for agent in pool.agents:
+            # Retrieve reasoning patterns for this agent
+            reasoning_patterns = agent.reasoning_memory.retrieve_similar_reasoning(
+                query=topic,
+                k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
+            )
+
+            # Retrieve domain knowledge
+            if domain_knowledge is None:
+                domain_knowledge = agent.shared_rag.retrieve(
+                    query=topic,
+                    k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
+                )
+
+            # Generate with reasoning
+            result = agent.generate_with_reasoning(
+                topic=topic,
+                reasoning_patterns=reasoning_patterns,
+                domain_knowledge=domain_knowledge,
+                reasoning_context=reasoning_context,
+                additional_context=additional_context
+            )
+
+            # Score this output
+            score = self.evaluator.score_section(
+                content=result['output'],
+                section_type=role,
+                topic=topic
+            )
+
+            logger.info(f"[ENSEMBLE] {agent.agent_id} scored {score:.1f}/10")
+
+            # Prepare reasoning for storage (don't store yet, wait for selection)
+            agent.prepare_reasoning_storage(
+                thinking=result['thinking'],
+                output=result['output'],
+                topic=topic,
+                domain=self.domain,
+                generation=generation_number,
+                context_sources=['coordinator', 'ensemble']
+            )
+
+            # Store serializable data only (no agent objects)
+            results.append({
+                'agent_id': agent.agent_id,
+                'agent': agent,  # Keep for internal use
+                'result': result,
+                'score': score
+            })
+
+        # Select best result
+        best = max(results, key=lambda x: x['score'])
+        winner_agent = best['agent']
+        winner_result = best['result']
+        winner_score = best['score']
+
+        logger.info(f"[ENSEMBLE] Winner: {winner_agent.agent_id} with score {winner_score:.1f}")
+
+        # Create serializable version of results (without agent objects)
+        serializable_results = [
+            {
+                'agent_id': r['agent_id'],
+                'score': r['score'],
+                'output_length': len(r['result']['output'])
+            }
+            for r in results
+        ]
+
+        return {
+            'output': winner_result['output'],
+            'thinking': winner_result['thinking'],
+            'all_results': results,  # For internal use (has agent objects)
+            'serializable_results': serializable_results,  # For state storage
+            'winner_id': winner_agent.agent_id,
+            'winner_score': winner_score
+        }
 
     def _build_graph(self) -> StateGraph:
         """Construct LangGraph workflow with hierarchical architecture.
@@ -300,7 +418,9 @@ class Pipeline:
         return state
 
     async def _intro_node(self, state: BlogState) -> BlogState:
-        """Execute intro agent with coordinator context.
+        """Execute intro agent ensemble with coordinator context.
+
+        All agents in the intro pool compete, best output is selected.
 
         Args:
             state: Current workflow state
@@ -308,48 +428,28 @@ class Pipeline:
         Returns:
             Updated state with intro content
         """
-        agent = self.agent_pools['intro'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
-
         start_time = time.time()
-
-        # Retrieve reasoning patterns
-        reasoning_patterns = agent.reasoning_memory.retrieve_similar_reasoning(
-            query=topic,
-            k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
-        )
-
-        # Retrieve domain knowledge
-        domain_knowledge = agent.shared_rag.retrieve(
-            query=topic,
-            k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
-        )
 
         # Get coordinator context
         coordinator_context = state.get('intro_coordinator_context', '')
 
-        # Generate with reasoning
-        result = agent.generate_with_reasoning(
+        # Execute ensemble: all agents compete
+        ensemble_result = self._execute_ensemble(
+            role='intro',
             topic=topic,
-            reasoning_patterns=reasoning_patterns,
-            domain_knowledge=domain_knowledge,
             reasoning_context="",
-            additional_context=coordinator_context
+            additional_context=coordinator_context,
+            generation_number=state['generation_number']
         )
 
-        # Store in state
-        state['intro'] = result['output']
-        state['intro_reasoning'] = result['thinking']
+        # Store winning output in state
+        state['intro'] = ensemble_result['output']
+        state['intro_reasoning'] = ensemble_result['thinking']
 
-        # Prepare for storage
-        agent.prepare_reasoning_storage(
-            thinking=result['thinking'],
-            output=result['output'],
-            topic=topic,
-            domain=self.domain,
-            generation=state['generation_number'],
-            context_sources=['coordinator']
-        )
+        # Store ensemble metadata for tracking (serializable only)
+        state['intro_ensemble_results'] = ensemble_result['serializable_results']
+        state['intro_winner_id'] = ensemble_result['winner_id']
 
         # Track timing
         end_time = time.time()
@@ -359,12 +459,17 @@ class Pipeline:
             'duration': end_time - start_time
         }
 
-        state['stream_logs'].append(f"[intro] Generated")
+        state['stream_logs'].append(
+            f"[intro] Ensemble complete - Winner: {ensemble_result['winner_id']} "
+            f"(score: {ensemble_result['winner_score']:.1f})"
+        )
 
         return state
 
     async def _body_node(self, state: BlogState) -> BlogState:
-        """Execute body agent with coordinator context and optional specialist support.
+        """Execute body agent ensemble with coordinator context and optional specialist support.
+
+        All agents in the body pool compete, best output is selected.
 
         Args:
             state: Current workflow state
@@ -372,22 +477,8 @@ class Pipeline:
         Returns:
             Updated state with body content
         """
-        agent = self.agent_pools['body'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
-
         start_time = time.time()
-
-        # Retrieve reasoning patterns
-        reasoning_patterns = agent.reasoning_memory.retrieve_similar_reasoning(
-            query=topic,
-            k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
-        )
-
-        # Retrieve domain knowledge
-        domain_knowledge = agent.shared_rag.retrieve(
-            query=topic,
-            k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
-        )
 
         # Get coordinator context
         coordinator_context = state.get('body_coordinator_context', '')
@@ -401,30 +492,24 @@ class Pipeline:
             )
 
         # Combine coordinator and specialist contexts
-        full_context = f"{coordinator_context}\n\nSPECIALIST INSIGHTS:\n{specialist_context}"
+        full_context = f"{coordinator_context}\n\nSPECIALIST INSIGHTS:\n{specialist_context}" if specialist_context else coordinator_context
 
-        # Generate with reasoning
-        result = agent.generate_with_reasoning(
+        # Execute ensemble: all agents compete
+        ensemble_result = self._execute_ensemble(
+            role='body',
             topic=topic,
-            reasoning_patterns=reasoning_patterns,
-            domain_knowledge=domain_knowledge,
             reasoning_context=state.get('intro_reasoning', ''),
-            additional_context=full_context
+            additional_context=full_context,
+            generation_number=state['generation_number']
         )
 
-        # Store in state
-        state['body'] = result['output']
-        state['body_reasoning'] = result['thinking']
+        # Store winning output in state
+        state['body'] = ensemble_result['output']
+        state['body_reasoning'] = ensemble_result['thinking']
 
-        # Prepare for storage
-        agent.prepare_reasoning_storage(
-            thinking=result['thinking'],
-            output=result['output'],
-            topic=topic,
-            domain=self.domain,
-            generation=state['generation_number'],
-            context_sources=['coordinator', 'intro', 'specialists'] if specialist_context else ['coordinator', 'intro']
-        )
+        # Store ensemble metadata (serializable only)
+        state['body_ensemble_results'] = ensemble_result['serializable_results']
+        state['body_winner_id'] = ensemble_result['winner_id']
 
         # Track timing
         end_time = time.time()
@@ -434,7 +519,10 @@ class Pipeline:
             'duration': end_time - start_time
         }
 
-        state['stream_logs'].append(f"[body] Generated")
+        state['stream_logs'].append(
+            f"[body] Ensemble complete - Winner: {ensemble_result['winner_id']} "
+            f"(score: {ensemble_result['winner_score']:.1f})"
+        )
 
         return state
 
@@ -461,7 +549,9 @@ class Pipeline:
         return "\n\n".join(insights) if insights else ""
 
     async def _conclusion_node(self, state: BlogState) -> BlogState:
-        """Execute conclusion agent with coordinator context.
+        """Execute conclusion agent ensemble with coordinator context.
+
+        All agents in the conclusion pool compete, best output is selected.
 
         Args:
             state: Current workflow state
@@ -469,48 +559,28 @@ class Pipeline:
         Returns:
             Updated state with conclusion content
         """
-        agent = self.agent_pools['conclusion'].select_agent(strategy="fitness_proportionate")
         topic = state['topic']
-
         start_time = time.time()
-
-        # Retrieve reasoning patterns
-        reasoning_patterns = agent.reasoning_memory.retrieve_similar_reasoning(
-            query=topic,
-            k=int(os.getenv('MAX_REASONING_RETRIEVE', '5'))
-        )
-
-        # Retrieve domain knowledge
-        domain_knowledge = agent.shared_rag.retrieve(
-            query=topic,
-            k=int(os.getenv('MAX_KNOWLEDGE_RETRIEVE', '3'))
-        )
 
         # Get coordinator context
         coordinator_context = state.get('conclusion_coordinator_context', '')
 
-        # Generate with reasoning
-        result = agent.generate_with_reasoning(
+        # Execute ensemble: all agents compete
+        ensemble_result = self._execute_ensemble(
+            role='conclusion',
             topic=topic,
-            reasoning_patterns=reasoning_patterns,
-            domain_knowledge=domain_knowledge,
             reasoning_context=f"{state.get('intro_reasoning', '')}\n\n{state.get('body_reasoning', '')}",
-            additional_context=coordinator_context
+            additional_context=coordinator_context,
+            generation_number=state['generation_number']
         )
 
-        # Store in state
-        state['conclusion'] = result['output']
-        state['conclusion_reasoning'] = result['thinking']
+        # Store winning output in state
+        state['conclusion'] = ensemble_result['output']
+        state['conclusion_reasoning'] = ensemble_result['thinking']
 
-        # Prepare for storage
-        agent.prepare_reasoning_storage(
-            thinking=result['thinking'],
-            output=result['output'],
-            topic=topic,
-            domain=self.domain,
-            generation=state['generation_number'],
-            context_sources=['coordinator', 'intro', 'body']
-        )
+        # Store ensemble metadata (serializable only)
+        state['conclusion_ensemble_results'] = ensemble_result['serializable_results']
+        state['conclusion_winner_id'] = ensemble_result['winner_id']
 
         # Track timing
         end_time = time.time()
@@ -520,7 +590,10 @@ class Pipeline:
             'duration': end_time - start_time
         }
 
-        state['stream_logs'].append(f"[conclusion] Generated")
+        state['stream_logs'].append(
+            f"[conclusion] Ensemble complete - Winner: {ensemble_result['winner_id']} "
+            f"(score: {ensemble_result['winner_score']:.1f})"
+        )
 
         return state
 
@@ -649,19 +722,50 @@ class Pipeline:
     def _evolve_node(self, state: BlogState) -> BlogState:
         """Store reasoning patterns and evolve agents.
 
+        In ensemble mode, each agent has individual scores from competition.
+
         Args:
             state: Current workflow state
 
         Returns:
             Updated state
         """
-        # Store reasoning and outputs for ALL agents in ALL pools
-        for role, pool in self.agent_pools.items():
-            score = state['scores'].get(role, 0.0)
+        # Store reasoning with INDIVIDUAL scores from ensemble competition
+        for role in ['intro', 'body', 'conclusion']:
+            # Use agent pool directly to access agents
+            pool = self.agent_pools[role]
+            ensemble_results_key = f'{role}_ensemble_results'
 
-            for agent in pool.agents:
-                agent.record_fitness(score=score, domain=self.domain)
-                agent.store_reasoning_and_output(score=score)
+            if ensemble_results_key in state and state[ensemble_results_key]:
+                # Ensemble mode: match agents with their scores
+                serializable_results = state[ensemble_results_key]
+
+                # Create agent_id to score mapping
+                score_map = {r['agent_id']: r['score'] for r in serializable_results}
+
+                # Record fitness and store reasoning for all agents
+                for agent in pool.agents:
+                    if agent.agent_id in score_map:
+                        score = score_map[agent.agent_id]
+
+                        # Record individual fitness
+                        agent.record_fitness(score=score, domain=self.domain)
+
+                        # Store reasoning (all agents executed, all have pending_reasoning)
+                        if agent.pending_reasoning is not None:
+                            agent.store_reasoning_and_output(score=score)
+
+                logger.info(f"[EVOLVE] {role} pool: stored reasoning for {len(serializable_results)} agents")
+            else:
+                # Fallback: legacy single-agent mode (shouldn't happen with new code)
+                logger.warning(f"[EVOLVE] No ensemble results for {role}, using fallback")
+                pool = self.agent_pools[role]
+                score = state['scores'].get(role, 0.0)
+
+                for agent in pool.agents:
+                    agent.record_fitness(score=score, domain=self.domain)
+                    if agent.pending_reasoning is not None:
+                        agent.store_reasoning_and_output(score=score)
 
         # Get pool statistics
         intro_pool_avg = self.agent_pools['intro'].avg_fitness()

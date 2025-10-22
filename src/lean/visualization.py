@@ -173,7 +173,12 @@ class StreamVisualizer:
         logs = state.get("stream_logs", [])[-5:]
         logs_text = "\n".join(logs) if logs else "[dim]No activity yet[/dim]"
 
-        return Panel(logs_text, title="📋 Activity Log", border_style="blue")
+        return Panel(
+            logs_text,
+            title="📋 Activity Log",
+            border_style="bright_blue",
+            title_align="left"
+        )
 
     def create_concurrency_panel(self, state: BlogState) -> Panel:
         """Show agent execution timing and overlap.
@@ -332,13 +337,18 @@ class HierarchicalVisualizer(StreamVisualizer):
         Returns:
             Rich Table with hierarchical agent status
         """
-        table = Table(title="🤖 Agent Execution Status (Hierarchical)", show_header=True)
-        table.add_column("Layer", style="dim", no_wrap=True, width=5)
-        table.add_column("Agent", style="cyan", no_wrap=True)
-        table.add_column("Status", style="magenta")
-        table.add_column("Pool", style="yellow", width=7)
-        table.add_column("Memories", style="green", width=8)
-        table.add_column("Score", style="blue", width=6)
+        table = Table(
+            title="🤖 Agent Execution Status (Ensemble Competition)",
+            show_header=True,
+            border_style="bright_blue",
+            header_style="bold bright_cyan"
+        )
+        table.add_column("Layer", style="dim", no_wrap=True, width=6)
+        table.add_column("Agent", style="bright_cyan", no_wrap=True, width=12)
+        table.add_column("Status", style="bright_magenta", width=11)
+        table.add_column("Pool", style="bright_yellow", width=6)
+        table.add_column("Memories", style="bright_green", width=10)
+        table.add_column("Score", style="bright_blue", width=13, justify="left")
 
         # Layer 1: Coordinator
         coord_status = self._get_coordinator_status(state)
@@ -354,23 +364,50 @@ class HierarchicalVisualizer(StreamVisualizer):
 
         # Layer 2: Content Agents (in pools)
         for role in ["intro", "body", "conclusion"]:
-            status = "✓ Done" if state.get(role) else "⟳ Gen" if state.get(f"{role}_reasoning") else "⏸ Wait"
+            # Check if ensemble has completed
+            ensemble_results_key = f"{role}_ensemble_results"
+            winner_id_key = f"{role}_winner_id"
 
-            # Pool info
+            if winner_id_key in state:
+                # Ensemble complete - show winner
+                winner_id = state[winner_id_key]
+                # Extract agent number from ID (e.g., "intro_3" -> "3")
+                agent_num = winner_id.split('_')[-1] if '_' in winner_id else winner_id
+                status = f"✓ Win#{agent_num}"
+            elif ensemble_results_key in state:
+                # Ensemble in progress
+                status = "⟳ Ens"
+            elif state.get(role):
+                # Legacy: done without ensemble info
+                status = "✓ Done"
+            elif state.get(f"{role}_reasoning"):
+                status = "⟳ Gen"
+            else:
+                status = "⏸ Wait"
+
+            # Pool info - show generation number and size
             pool_info = "-"
             if self.pipeline and hasattr(self.pipeline, 'agent_pools'):
                 pool = self.pipeline.agent_pools.get(role)
                 if pool:
-                    pool_info = f"{pool.size()}"
+                    pool_info = f"G{pool.generation}"
 
             # Memory info
             reasoning_count = state.get("reasoning_patterns_used", {}).get(role, 0)
             knowledge_count = state.get("domain_knowledge_used", {}).get(role, 0)
             mem_info = f"R:{reasoning_count} K:{knowledge_count}" if (reasoning_count + knowledge_count) > 0 else "-"
 
-            # Score
-            score = state.get("scores", {}).get(role, 0.0)
-            score_str = f"{score:.1f}" if score > 0 else "-"
+            # Score - show winning score from ensemble if available
+            if ensemble_results_key in state and state[ensemble_results_key]:
+                # Show best score from ensemble (serializable results)
+                results = state[ensemble_results_key]
+                scores = [r['score'] for r in results]
+                best_score = max(scores)
+                avg_score = sum(scores) / len(scores)
+                score_str = f"{best_score:.1f} ({avg_score:.1f})"
+            else:
+                score = state.get("scores", {}).get(role, 0.0)
+                score_str = f"{score:.1f}" if score > 0 else "-"
 
             table.add_row(
                 "L2",
@@ -477,7 +514,8 @@ class HierarchicalVisualizer(StreamVisualizer):
         return Panel(
             evo_text,
             title="🧬 Agent Pool Evolution",
-            border_style="magenta"
+            border_style="bright_magenta",
+            title_align="left"
         )
 
     def create_coordinator_panel(self, state: BlogState) -> Panel:
@@ -525,7 +563,8 @@ class HierarchicalVisualizer(StreamVisualizer):
         return Panel(
             coord_text,
             title="🎯 Coordinator Activity",
-            border_style="cyan"
+            border_style="bright_cyan",
+            title_align="left"
         )
 
     def create_memory_panel(self, state: BlogState) -> Panel:
@@ -571,7 +610,8 @@ class HierarchicalVisualizer(StreamVisualizer):
         return Panel(
             mem_text,
             title="🧠 Retrieved Memories (Hierarchical)",
-            border_style="green"
+            border_style="bright_green",
+            title_align="left"
         )
 
     async def display_stream(self, state_stream: AsyncIterator[BlogState]):
@@ -586,14 +626,14 @@ class HierarchicalVisualizer(StreamVisualizer):
                 pass
             return
 
-        # Create hierarchical layout
+        # Create hierarchical layout - adjusted sizes for better visibility
         layout = Layout()
         layout.split_column(
-            Layout(name="status", size=12),       # Hierarchical status
-            Layout(name="coordinator", size=10),  # Coordinator workflow
-            Layout(name="pools", size=12),        # Pool evolution
-            Layout(name="memories", size=12),     # Hierarchical memories
-            Layout(name="logs", size=8),          # Activity logs
+            Layout(name="status", size=14),       # Hierarchical status
+            Layout(name="coordinator", size=12),  # Coordinator workflow
+            Layout(name="pools", size=14),        # Pool evolution
+            Layout(name="memories", size=14),     # Hierarchical memories
+            Layout(name="logs", size=10),         # Activity logs
         )
 
         # Stream with live updates

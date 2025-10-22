@@ -14,8 +14,11 @@ from datetime import datetime
 import time
 import re
 from dotenv import load_dotenv
+from lean.logger import get_logger
 
 load_dotenv()
+
+logger = get_logger(__name__)
 
 
 def generate_reasoning_collection_name(role: str, agent_id: str) -> str:
@@ -230,7 +233,7 @@ class ReasoningMemory:
                 n_results=min(k * 3, 50)  # Get extra, then re-rank
             )
         except Exception as e:
-            print(f"[Warning] Reasoning retrieval error: {e}")
+            logger.warning(f"Reasoning retrieval error: {e}")
             return []
 
         if not results['documents'][0]:
@@ -332,7 +335,7 @@ class ReasoningMemory:
                 # Update metadata
                 self.collection.update(ids=[pattern_id], metadatas=[metadata])
         except Exception as e:
-            print(f"[Warning] Failed to increment retrieval count: {e}")
+            logger.warning(f"Failed to increment retrieval count: {e}")
 
     def count(self) -> int:
         """Get total number of reasoning patterns stored."""
