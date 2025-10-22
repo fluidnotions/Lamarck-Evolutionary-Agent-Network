@@ -496,9 +496,9 @@ class Pipeline:
         return state
 
     async def _intro_node(self, state: BlogState) -> BlogState:
-        """Execute intro agent ensemble with coordinator context.
+        """Execute intro agent ensemble with coordinator context, then post-process with specialists.
 
-        All agents in the intro pool compete, best output is selected.
+        All agents in the intro pool compete, best output is selected, then specialists enhance it.
 
         Args:
             state: Current workflow state
@@ -506,6 +506,7 @@ class Pipeline:
         Returns:
             Updated state with intro content
         """
+        from loguru import logger
         topic = state['topic']
         start_time = time.time()
 
@@ -522,8 +523,27 @@ class Pipeline:
         )
 
         # Store winning output in state
-        state['intro'] = ensemble_result['output']
+        original_output = ensemble_result['output']
+        state['intro'] = original_output
         state['intro_reasoning'] = ensemble_result['thinking']
+
+        # Post-process with specialists (if enabled)
+        if self.enable_specialists and self.specialists:
+            logger.info(f"[SPECIALIST] Post-processing intro content with specialists")
+            specialist_result = await self._post_process_with_specialists(
+                role='intro',
+                content=original_output,
+                topic=topic,
+                research_context=state.get('research_results', {})
+            )
+
+            # Update state with improved content if specialists made changes
+            if specialist_result['improved']:
+                state['intro'] = specialist_result['final_content']
+                logger.info(f"[SPECIALIST] Intro content improved by specialists")
+                state['stream_logs'].append("[specialists] Intro content enhanced")
+            else:
+                logger.info(f"[SPECIALIST] No specialist changes needed for intro")
 
         # Store ensemble metadata for tracking (serializable only)
         state['intro_ensemble_results'] = ensemble_result['serializable_results']
@@ -553,9 +573,9 @@ class Pipeline:
         return state
 
     async def _body_node(self, state: BlogState) -> BlogState:
-        """Execute body agent ensemble with coordinator context and optional specialist support.
+        """Execute body agent ensemble with coordinator context, then post-process with specialists.
 
-        All agents in the body pool compete, best output is selected.
+        All agents in the body pool compete, best output is selected, then specialists enhance it.
 
         Args:
             state: Current workflow state
@@ -563,35 +583,44 @@ class Pipeline:
         Returns:
             Updated state with body content
         """
+        from loguru import logger
         topic = state['topic']
         start_time = time.time()
 
         # Get coordinator context
         coordinator_context = state.get('body_coordinator_context', '')
 
-        # Optionally invoke specialists (if enabled)
-        specialist_context = ""
-        if self.enable_specialists and self.specialists:
-            specialist_context = await self._invoke_specialists(
-                topic=topic,
-                content_context=coordinator_context
-            )
-
-        # Combine coordinator and specialist contexts
-        full_context = f"{coordinator_context}\n\nSPECIALIST INSIGHTS:\n{specialist_context}" if specialist_context else coordinator_context
-
         # Execute ensemble: all agents compete
         ensemble_result = self._execute_ensemble(
             role='body',
             topic=topic,
             reasoning_context=state.get('intro_reasoning', ''),
-            additional_context=full_context,
+            additional_context=coordinator_context,
             generation_number=state['generation_number']
         )
 
         # Store winning output in state
-        state['body'] = ensemble_result['output']
+        original_output = ensemble_result['output']
+        state['body'] = original_output
         state['body_reasoning'] = ensemble_result['thinking']
+
+        # Post-process with specialists (if enabled)
+        if self.enable_specialists and self.specialists:
+            logger.info(f"[SPECIALIST] Post-processing body content with specialists")
+            specialist_result = await self._post_process_with_specialists(
+                role='body',
+                content=original_output,
+                topic=topic,
+                research_context=state.get('research_results', {})
+            )
+
+            # Update state with improved content if specialists made changes
+            if specialist_result['improved']:
+                state['body'] = specialist_result['final_content']
+                logger.info(f"[SPECIALIST] Body content improved by specialists")
+                state['stream_logs'].append("[specialists] Body content enhanced")
+            else:
+                logger.info(f"[SPECIALIST] No specialist changes needed for body")
 
         # Store ensemble metadata (serializable only)
         state['body_ensemble_results'] = ensemble_result['serializable_results']
@@ -620,32 +649,80 @@ class Pipeline:
 
         return state
 
-    async def _invoke_specialists(self, topic: str, content_context: str) -> str:
-        """Invoke specialist agents for support.
+    async def _post_process_with_specialists(
+        self,
+        role: str,
+        content: str,
+        topic: str,
+        research_context: Dict
+    ) -> Dict[str, any]:
+        """Post-process winning content with specialist agents.
 
         Args:
+            role: Role of the content (intro, body, conclusion)
+            content: Winning content to improve
             topic: Topic being written about
-            content_context: Context from coordinator
+            research_context: Research results for context
 
         Returns:
-            Combined specialist insights
+            Dict with improved content and metadata
         """
-        insights = []
+        from loguru import logger
 
-        # Researcher insights
-        if 'researcher' in self.specialists:
-            research = self.specialists['researcher'].research_claim(
-                claim=f"Research insights for: {topic}",
-                content_context=content_context
+        improved_content = content
+        improvements_made = []
+
+        # Fact-check the content
+        if 'fact_checker' in self.specialists:
+            logger.info(f"[SPECIALIST] Fact-checking {role} content")
+            fact_check_result = self.specialists['fact_checker'].check_content(
+                content=improved_content,
+                research_context=str(research_context)[:500]
             )
-            insights.append(f"RESEARCH: {research['findings'][:300]}...")
 
-        return "\n\n".join(insights) if insights else ""
+            # Log fact-check results
+            findings = fact_check_result['findings']
+            logger.info(f"[SPECIALIST] Fact-check complete: {findings[:200]}...")
+
+            # Check if corrections are needed
+            if 'NEEDS_REVISION' in findings or 'CORRECTIONS:' in findings:
+                improvements_made.append('fact_check')
+
+        # Improve style and readability
+        if 'stylist' in self.specialists:
+            logger.info(f"[SPECIALIST] Improving {role} style")
+            style_result = self.specialists['stylist'].improve_style(
+                content=improved_content,
+                target_tone='professional'
+            )
+
+            # Extract revised version if present
+            improvements_text = style_result['improvements']
+            logger.info(f"[SPECIALIST] Style improvements: {improvements_text[:200]}...")
+
+            # Look for revised version in the output
+            if 'REVISED VERSION:' in improvements_text:
+                # Extract revised content
+                revised_start = improvements_text.find('REVISED VERSION:') + len('REVISED VERSION:')
+                revised_content = improvements_text[revised_start:].strip()
+
+                # Only use if it's substantially different and not empty
+                if revised_content and len(revised_content) > 50 and revised_content != improved_content:
+                    improved_content = revised_content
+                    improvements_made.append('style')
+                    logger.info(f"[SPECIALIST] Applied style improvements to {role}")
+
+        return {
+            'final_content': improved_content,
+            'original_content': content,
+            'improved': len(improvements_made) > 0,
+            'improvements': improvements_made
+        }
 
     async def _conclusion_node(self, state: BlogState) -> BlogState:
-        """Execute conclusion agent ensemble with coordinator context.
+        """Execute conclusion agent ensemble with coordinator context, then post-process with specialists.
 
-        All agents in the conclusion pool compete, best output is selected.
+        All agents in the conclusion pool compete, best output is selected, then specialists enhance it.
 
         Args:
             state: Current workflow state
@@ -653,6 +730,7 @@ class Pipeline:
         Returns:
             Updated state with conclusion content
         """
+        from loguru import logger
         topic = state['topic']
         start_time = time.time()
 
@@ -669,8 +747,27 @@ class Pipeline:
         )
 
         # Store winning output in state
-        state['conclusion'] = ensemble_result['output']
+        original_output = ensemble_result['output']
+        state['conclusion'] = original_output
         state['conclusion_reasoning'] = ensemble_result['thinking']
+
+        # Post-process with specialists (if enabled)
+        if self.enable_specialists and self.specialists:
+            logger.info(f"[SPECIALIST] Post-processing conclusion content with specialists")
+            specialist_result = await self._post_process_with_specialists(
+                role='conclusion',
+                content=original_output,
+                topic=topic,
+                research_context=state.get('research_results', {})
+            )
+
+            # Update state with improved content if specialists made changes
+            if specialist_result['improved']:
+                state['conclusion'] = specialist_result['final_content']
+                logger.info(f"[SPECIALIST] Conclusion content improved by specialists")
+                state['stream_logs'].append("[specialists] Conclusion content enhanced")
+            else:
+                logger.info(f"[SPECIALIST] No specialist changes needed for conclusion")
 
         # Store ensemble metadata (serializable only)
         state['conclusion_ensemble_results'] = ensemble_result['serializable_results']
