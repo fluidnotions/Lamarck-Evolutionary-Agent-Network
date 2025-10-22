@@ -92,11 +92,16 @@ async def main(config_name: str = "default"):
         os.environ['MAX_KNOWLEDGE_RETRIEVE'] = str(memory_config['max_knowledge_retrieve'])
 
     tavily_key_present = bool(os.getenv('TAVILY_API_KEY'))
+    research_config = exp_config.research_config or {}
     if not tavily_key_present:
-        exp_config.research_config['enabled'] = False
+        if research_config.get('enabled'):
+            logger.info("Tavily API key missing; disabling research integration.")
+        research_config['enabled'] = False
+    else:
+        research_config.setdefault('enabled', True)
 
-    enable_research_config = exp_config.research_config.get('enabled', True)
-    enable_research = enable_research_config and tavily_key_present
+    enable_research = research_config.get('enabled', True) and tavily_key_present
+    exp_config.research_config = research_config
     enable_specialists = os.getenv('ENABLE_SPECIALISTS', 'true').lower() == 'true'
     enable_revision = os.getenv('ENABLE_REVISION', 'true').lower() == 'true'
     max_revisions = int(os.getenv('MAX_REVISIONS', '2'))

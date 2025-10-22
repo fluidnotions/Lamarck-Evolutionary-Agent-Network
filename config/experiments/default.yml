@@ -129,7 +129,7 @@ memory:
 
 # Research settings for Tavily integration
 research:
-  enabled: true
+  enabled: false
   provider: "tavily"
   max_results: 5
   search_depth: "advanced"  # basic or advanced
