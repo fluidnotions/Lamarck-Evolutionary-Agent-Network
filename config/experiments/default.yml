@@ -128,7 +128,7 @@ memory:
   max_knowledge_retrieve: 3
   max_reasoning_retrieve: 5
   inherited_reasoning_size: 100
-  score_threshold: 7.0
+  score_threshold: 9.0
   shared_rag_min_score: 8.0
 
 # Research settings for Tavily integration
@@ -148,8 +148,8 @@ evolution:
 
 # Human-in-the-Loop Configuration
 hitl:
-  enabled: true
-  auto_approve: false
+  enabled: false
+  auto_approve: true
   verbose: true
   review_points: ""
 

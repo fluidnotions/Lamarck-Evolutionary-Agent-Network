@@ -301,3 +301,306 @@ class StreamVisualizer:
                     state.get("conclusion", ""), title="Conclusion", border_style="cyan"
                 )
             )
+
+
+class HierarchicalVisualizer(StreamVisualizer):
+    """Enhanced visualizer for hierarchical ensemble architecture.
+
+    Displays:
+    - 3-layer hierarchy (Coordinator → Content Agents → Specialists)
+    - Agent pool evolution (population, fitness, diversity)
+    - Coordinator workflow (research → distribute → critique)
+    - Memory retrieval with inheritance tracking
+    - Revision loop progress
+    """
+
+    def __init__(self, pipeline=None):
+        """Initialize hierarchical visualizer.
+
+        Args:
+            pipeline: Pipeline instance (provides access to pools, coordinator, specialists)
+        """
+        super().__init__()
+        self.pipeline = pipeline
+
+    def create_status_table(self, state: BlogState) -> Table:
+        """Create hierarchical status table showing all 3 layers.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Rich Table with hierarchical agent status
+        """
+        table = Table(title="🤖 Agent Execution Status (Hierarchical)", show_header=True)
+        table.add_column("Layer", style="dim", no_wrap=True, width=5)
+        table.add_column("Agent", style="cyan", no_wrap=True)
+        table.add_column("Status", style="magenta")
+        table.add_column("Pool", style="yellow", width=7)
+        table.add_column("Memories", style="green", width=8)
+        table.add_column("Score", style="blue", width=6)
+
+        # Layer 1: Coordinator
+        coord_status = self._get_coordinator_status(state)
+        coord_memories = state.get("reasoning_patterns_used", {}).get("coordinator", 0)
+        table.add_row(
+            "L1",
+            "Coordinator",
+            coord_status,
+            "-",
+            str(coord_memories) if coord_memories > 0 else "-",
+            "-"
+        )
+
+        # Layer 2: Content Agents (in pools)
+        for role in ["intro", "body", "conclusion"]:
+            status = "✓ Done" if state.get(role) else "⟳ Gen" if state.get(f"{role}_reasoning") else "⏸ Wait"
+
+            # Pool info
+            pool_info = "-"
+            if self.pipeline and hasattr(self.pipeline, 'agent_pools'):
+                pool = self.pipeline.agent_pools.get(role)
+                if pool:
+                    pool_info = f"{pool.size()}"
+
+            # Memory info
+            reasoning_count = state.get("reasoning_patterns_used", {}).get(role, 0)
+            knowledge_count = state.get("domain_knowledge_used", {}).get(role, 0)
+            mem_info = f"R:{reasoning_count} K:{knowledge_count}" if (reasoning_count + knowledge_count) > 0 else "-"
+
+            # Score
+            score = state.get("scores", {}).get(role, 0.0)
+            score_str = f"{score:.1f}" if score > 0 else "-"
+
+            table.add_row(
+                "L2",
+                f"{role.capitalize()}",
+                status,
+                pool_info,
+                mem_info,
+                score_str
+            )
+
+        # Layer 3: Specialists (if enabled)
+        if self.pipeline and hasattr(self.pipeline, 'specialists') and self.pipeline.specialists:
+            for spec_name in ["researcher", "fact_checker", "stylist"]:
+                if spec_name in self.pipeline.specialists:
+                    # Check if specialist was used (placeholder - would need tracking in state)
+                    status = "○ Ready"
+                    table.add_row(
+                        "L3",
+                        spec_name.replace("_", " ").title(),
+                        status,
+                        "-",
+                        "-",
+                        "-"
+                    )
+
+        return table
+
+    def _get_coordinator_status(self, state: BlogState) -> str:
+        """Determine coordinator status from state.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Status string
+        """
+        # Check for coordinator critique
+        if state.get("coordinator_critique"):
+            return "✓ Critique"
+
+        # Check if content is being generated
+        if state.get("intro") or state.get("body") or state.get("conclusion"):
+            return "⟳ Aggr"
+
+        # Check for research/distribute phase
+        if state.get("stream_logs"):
+            recent_logs = state.get("stream_logs", [])[-3:]
+            for log in recent_logs:
+                if "research" in log.lower() or "tavily" in log.lower():
+                    return "⟳ Research"
+                if "distribute" in log.lower() or "context" in log.lower():
+                    return "⟳ Dist"
+
+        return "○ Ready"
+
+    def create_pool_evolution_panel(self, state: BlogState) -> Panel:
+        """Show agent pool evolution status.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Rich Panel with pool evolution information
+        """
+        if not self.pipeline or not hasattr(self.pipeline, 'agent_pools'):
+            return Panel(
+                "[dim]Pool information not available[/dim]",
+                title="🧬 Agent Pool Evolution",
+                border_style="magenta"
+            )
+
+        evo_text = ""
+
+        # Generation info
+        gen_num = state.get("generation_number", 0)
+        if hasattr(self.pipeline, 'evolution_frequency'):
+            evo_freq = self.pipeline.evolution_frequency
+            next_evo = ((gen_num // evo_freq) + 1) * evo_freq
+            evo_text += f"[bold]Generation:[/bold] {gen_num} (Next evolution: {next_evo})\n\n"
+
+        # Pool stats for each role
+        for role in ["intro", "body", "conclusion"]:
+            pool = self.pipeline.agent_pools.get(role)
+            if pool:
+                active_agent = pool.select_active_agent() if pool.size() > 0 else None
+                active_fitness = active_agent.avg_fitness() if active_agent else 0.0
+
+                evo_text += f"[bold cyan]{role.upper()} POOL:[/bold cyan]\n"
+                evo_text += f"  Active: {active_agent.agent_id if active_agent else 'None'} "
+                evo_text += f"(fitness: {active_fitness:.1f})\n"
+                evo_text += f"  Population: {pool.size()} agents | "
+                evo_text += f"Avg Fitness: {pool.avg_fitness():.1f} | "
+                evo_text += f"Diversity: {pool.measure_diversity():.2f}\n\n"
+
+        # Check for recent evolution events in logs
+        recent_logs = state.get("stream_logs", [])[-10:]
+        for log in recent_logs:
+            if "evolution" in log.lower() or "offspring" in log.lower():
+                evo_text += f"[yellow]🧬 {log}[/yellow]\n"
+
+        if not evo_text:
+            evo_text = "[dim]No pool data yet[/dim]"
+
+        return Panel(
+            evo_text,
+            title="🧬 Agent Pool Evolution",
+            border_style="magenta"
+        )
+
+    def create_coordinator_panel(self, state: BlogState) -> Panel:
+        """Show coordinator workflow progress.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Rich Panel with coordinator activity
+        """
+        coord_text = ""
+
+        # Workflow phases
+        phases = [
+            ("1. RESEARCH", "✓" if "research" in str(state.get("stream_logs", [])).lower() else "○"),
+            ("2. DISTRIBUTE", "✓" if "distribute" in str(state.get("stream_logs", [])).lower() else "○"),
+            ("3-5. GENERATE", "⟳" if any(state.get(r) for r in ["intro", "body", "conclusion"]) else "○"),
+            ("6. AGGREGATE", "✓" if all(state.get(r) for r in ["intro", "body", "conclusion"]) else "○"),
+            ("7. CRITIQUE", "✓" if state.get("coordinator_critique") else "○"),
+        ]
+
+        for phase, status in phases:
+            coord_text += f"[{phase}] {status}\n"
+
+        # Revision loop info
+        revision_count = state.get("revision_count", 0)
+        max_revisions = 2  # Default, could get from pipeline
+        if self.pipeline and hasattr(self.pipeline, 'max_revisions'):
+            max_revisions = self.pipeline.max_revisions
+
+        coord_text += f"\n[bold]Revision Loop:[/bold] {revision_count}/{max_revisions} iterations\n"
+
+        # Critique summary if available
+        if state.get("coordinator_critique"):
+            critique = state["coordinator_critique"]
+            if isinstance(critique, dict):
+                scores = critique.get("scores", {})
+                overall = scores.get("overall", 0)
+                coord_text += f"\n[bold]Quality Score:[/bold] {overall:.1f}/10\n"
+                if critique.get("feedback"):
+                    feedback_preview = critique["feedback"][:80]
+                    coord_text += f"[dim]{feedback_preview}...[/dim]\n"
+
+        return Panel(
+            coord_text,
+            title="🎯 Coordinator Activity",
+            border_style="cyan"
+        )
+
+    def create_memory_panel(self, state: BlogState) -> Panel:
+        """Show retrieved memories with inheritance tracking.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            Rich Panel with hierarchical memory information
+        """
+        mem_text = ""
+
+        # Coordinator memories
+        coord_reasoning = state.get("reasoning_patterns_used", {}).get("coordinator", 0)
+        coord_knowledge = state.get("domain_knowledge_used", {}).get("coordinator", 0)
+        if coord_reasoning + coord_knowledge > 0:
+            mem_text += "[bold cyan]COORDINATOR (L1):[/bold cyan]\n"
+            mem_text += f"  Reasoning: {coord_reasoning} patterns | Domain: {coord_knowledge} facts\n\n"
+
+        # Content agent memories
+        for role in ["intro", "body", "conclusion"]:
+            reasoning_count = state.get("reasoning_patterns_used", {}).get(role, 0)
+            knowledge_count = state.get("domain_knowledge_used", {}).get(role, 0)
+
+            if reasoning_count + knowledge_count > 0:
+                mem_text += f"[bold cyan]{role.upper()} (L2):[/bold cyan]\n"
+                mem_text += f"  Reasoning: {reasoning_count} patterns | Domain: {knowledge_count} facts\n"
+
+                # Show reasoning preview if available
+                reasoning_preview = state.get(f"{role}_reasoning", "")
+                if reasoning_preview:
+                    preview_lines = reasoning_preview.split('\n')[:2]
+                    for line in preview_lines:
+                        if line.strip():
+                            mem_text += f"  [dim]{line[:60]}...[/dim]\n"
+
+                mem_text += "\n"
+
+        if not mem_text:
+            mem_text = "[dim]No memories retrieved yet[/dim]"
+
+        return Panel(
+            mem_text,
+            title="🧠 Retrieved Memories (Hierarchical)",
+            border_style="green"
+        )
+
+    async def display_stream(self, state_stream: AsyncIterator[BlogState]):
+        """Display real-time hierarchical execution updates.
+
+        Args:
+            state_stream: Async iterator of state updates
+        """
+        if not self.show_visualization:
+            # Just consume the stream without displaying
+            async for _ in state_stream:
+                pass
+            return
+
+        # Create hierarchical layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="status", size=12),       # Hierarchical status
+            Layout(name="coordinator", size=10),  # Coordinator workflow
+            Layout(name="pools", size=12),        # Pool evolution
+            Layout(name="memories", size=12),     # Hierarchical memories
+            Layout(name="logs", size=8),          # Activity logs
+        )
+
+        # Stream with live updates
+        with Live(layout, console=self.console, refresh_per_second=4) as live:
+            async for state in state_stream:
+                layout["status"].update(self.create_status_table(state))
+                layout["coordinator"].update(self.create_coordinator_panel(state))
+                layout["pools"].update(self.create_pool_evolution_panel(state))
+                layout["memories"].update(self.create_memory_panel(state))
+                layout["logs"].update(self.create_logs_panel(state))

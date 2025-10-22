@@ -31,7 +31,7 @@ from lean.specialists import create_specialist_agents
 from lean.reasoning_memory import ReasoningMemory, generate_reasoning_collection_name
 from lean.context_manager import ContextManager
 from lean.evaluation import ContentEvaluator
-from lean.visualization import StreamVisualizer
+from lean.visualization import HierarchicalVisualizer
 from lean.agent_pool import AgentPool
 from lean.reproduction import SexualReproduction
 
@@ -128,7 +128,7 @@ class Pipeline:
 
         # Initialize evaluator and visualizer
         self.evaluator = ContentEvaluator()
-        self.visualizer = StreamVisualizer()
+        self.visualizer = HierarchicalVisualizer(pipeline=self)
 
         # Create agent pools with M2 evolution
         self.agent_pools = {
