@@ -22,18 +22,7 @@ class ResearcherAgent(BaseAgent):
     - Knowledge gap identification
     - Credibility assessment
     """
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for researcher agent (Layer 1)."""
-        return """You are a Research Specialist in the LEAN evolutionary system.
-
-Your role is to provide deep research insights:
-- Find relevant studies, data, expert opinions
-- Verify claims and statistics
-- Identify knowledge gaps
-- Suggest evidence to strengthen arguments
-
-Focus on credibility and accuracy."""
+    # Uses base class _get_role_instruction() with YAML prompt
 
     def research_claim(
         self,
@@ -123,18 +112,7 @@ class FactCheckerAgent(BaseAgent):
     - Source validation
     - Correction suggestions
     """
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for fact-checker agent (Layer 1)."""
-        return """You are a Fact-Checking Specialist in the LEAN evolutionary system.
-
-Your role is to ensure accuracy:
-- Verify factual claims
-- Check statistics and citations
-- Flag unsupported assertions
-- Suggest corrections or qualifications
-
-Be thorough but fair in assessment."""
+    # Uses base class _get_role_instruction() with YAML prompt
 
     def check_content(
         self,
@@ -227,18 +205,7 @@ class StylistAgent(BaseAgent):
     - Style refinement
     - Error correction
     """
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for stylist agent (Layer 1)."""
-        return """You are a Style Specialist in the LEAN evolutionary system.
-
-Your role is to enhance writing quality:
-- Improve clarity and readability
-- Strengthen word choice and phrasing
-- Fix awkward constructions
-- Ensure consistent tone and voice
-
-Preserve the author's intent while refining expression."""
+    # Uses base class _get_role_instruction() with YAML prompt
 
     def improve_style(
         self,
@@ -322,7 +289,8 @@ TONE CONSISTENCY: [GOOD/NEEDS_WORK]
 def create_specialist_agents(
     reasoning_dir: str = "./data/reasoning",
     shared_rag: Optional[SharedRAG] = None,
-    agent_ids: Optional[Dict[str, str]] = None
+    agent_ids: Optional[Dict[str, str]] = None,
+    agent_prompts: Optional[Dict[str, str]] = None
 ) -> Dict[str, BaseAgent]:
     """Create specialist agents.
 
@@ -330,6 +298,7 @@ def create_specialist_agents(
         reasoning_dir: Directory for reasoning patterns
         shared_rag: Shared knowledge base (reuse from main agents)
         agent_ids: Optional dict mapping role → agent_id
+        agent_prompts: Optional dict mapping role → system_prompt from YAML
 
     Returns:
         Dictionary mapping role → specialist agent instance
@@ -348,6 +317,10 @@ def create_specialist_agents(
             'stylist': 'specialist_1'
         }
 
+    # Default to empty prompts dict if not provided
+    if agent_prompts is None:
+        agent_prompts = {}
+
     specialists = {}
 
     # Create researcher agent
@@ -360,7 +333,8 @@ def create_specialist_agents(
         role='researcher',
         agent_id=f"researcher_{agent_ids['researcher']}",
         reasoning_memory=researcher_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('researcher')
     )
 
     # Create fact-checker agent
@@ -373,7 +347,8 @@ def create_specialist_agents(
         role='fact_checker',
         agent_id=f"fact_checker_{agent_ids['fact_checker']}",
         reasoning_memory=fact_checker_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('fact_checker')
     )
 
     # Create stylist agent
@@ -386,7 +361,8 @@ def create_specialist_agents(
         role='stylist',
         agent_id=f"stylist_{agent_ids['stylist']}",
         reasoning_memory=stylist_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('stylist')
     )
 
     return specialists

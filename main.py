@@ -72,6 +72,12 @@ async def main(config_name: str = "default"):
     enable_revision = os.getenv('ENABLE_REVISION', 'true').lower() == 'true'
     max_revisions = int(os.getenv('MAX_REVISIONS', '2'))
 
+    # Convert agent_prompts from Dict[str, AgentPromptConfig] to Dict[str, str]
+    agent_prompts_dict = {
+        role: config.system_prompt
+        for role, config in agent_prompts.items()
+    }
+
     pipeline = Pipeline(
         reasoning_dir=exp_config.reasoning_dir,
         shared_rag_dir=exp_config.shared_rag_dir,
@@ -81,7 +87,8 @@ async def main(config_name: str = "default"):
         enable_research=enable_research,
         enable_specialists=enable_specialists,
         enable_revision=enable_revision,
-        max_revisions=max_revisions
+        max_revisions=max_revisions,
+        agent_prompts=agent_prompts_dict
     )
 
     print("✅ Pipeline V3 initialized with Hierarchical Architecture")

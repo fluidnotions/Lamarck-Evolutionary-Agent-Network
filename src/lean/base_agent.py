@@ -53,7 +53,8 @@ class BaseAgent(ABC):
         agent_id: str,
         reasoning_memory: ReasoningMemory,
         shared_rag: SharedRAG,
-        parent_ids: Optional[List[str]] = None
+        parent_ids: Optional[List[str]] = None,
+        system_prompt: Optional[str] = None
     ):
         """Initialize agent with reasoning pattern memory.
 
@@ -63,12 +64,14 @@ class BaseAgent(ABC):
             reasoning_memory: Reasoning pattern storage (Layer 3)
             shared_rag: Shared knowledge base (Layer 2)
             parent_ids: Parent agent IDs (for lineage tracking)
+            system_prompt: Base system prompt from YAML config (Layer 1)
         """
         self.role = role
         self.agent_id = agent_id
         self.reasoning_memory = reasoning_memory
         self.shared_rag = shared_rag
         self.parent_ids = parent_ids or []
+        self.system_prompt = system_prompt  # Store YAML prompt
 
         # Initialize LLM
         self.llm = ChatAnthropic(
@@ -253,14 +256,19 @@ Now complete the task:"""
 
         return prompt
 
-    @abstractmethod
     def _get_role_instruction(self) -> str:
         """Get role-specific instruction (Layer 1: Fixed).
+
+        Returns from YAML config if available, otherwise falls back to default.
 
         Returns:
             Role instruction string
         """
-        pass
+        if self.system_prompt:
+            return self.system_prompt
+
+        # Fallback to default generic prompt if no YAML prompt provided
+        return f"You are a {self.role} agent. Generate high-quality content for your assigned role."
 
     def _parse_response(self, response_text: str) -> Tuple[str, str]:
         """Parse <think> and <final> sections from LLM response.
@@ -439,42 +447,32 @@ Now complete the task:"""
 
 class IntroAgent(BaseAgent):
     """Intro agent with reasoning pattern architecture."""
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for intro agent (Layer 1)."""
-        return """You are an expert introduction writer. Your role is to write engaging,
-concise introductions (2-3 sentences) that hook the reader and set expectations."""
+    pass  # Uses base class _get_role_instruction() with YAML prompt
 
 
 class BodyAgent(BaseAgent):
     """Body agent with reasoning pattern architecture."""
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for body agent (Layer 1)."""
-        return """You are an expert content writer. Your role is to write clear,
-informative main body content with good structure, depth, and supporting details."""
+    pass  # Uses base class _get_role_instruction() with YAML prompt
 
 
 class ConclusionAgent(BaseAgent):
     """Conclusion agent with reasoning pattern architecture."""
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for conclusion agent (Layer 1)."""
-        return """You are an expert conclusion writer. Your role is to write strong
-conclusions that summarize key points and provide impact or a call to action."""
+    pass  # Uses base class _get_role_instruction() with YAML prompt
 
 
 def create_agents(
     reasoning_dir: str = "./data/reasoning",
     shared_rag_dir: str = "./data/shared_rag",
-    agent_ids: Optional[Dict[str, str]] = None
+    agent_ids: Optional[Dict[str, str]] = None,
+    agent_prompts: Optional[Dict[str, str]] = None
 ) -> Dict[str, BaseAgent]:
-    """Create V2 agents with reasoning pattern architecture.
+    """Create agents with reasoning pattern architecture.
 
     Args:
         reasoning_dir: Directory for per-agent reasoning patterns
         shared_rag_dir: Directory for shared knowledge base
         agent_ids: Optional dict mapping role → agent_id (e.g., {'intro': 'agent_1'})
+        agent_prompts: Optional dict mapping role → system_prompt from YAML
 
     Returns:
         Dictionary mapping role → agent instance
@@ -483,7 +481,8 @@ def create_agents(
         agents = create_agents(
             reasoning_dir="./data/reasoning",
             shared_rag_dir="./data/shared_rag",
-            agent_ids={'intro': 'agent_1', 'body': 'agent_1', 'conclusion': 'agent_1'}
+            agent_ids={'intro': 'agent_1', 'body': 'agent_1', 'conclusion': 'agent_1'},
+            agent_prompts={'intro': 'You are...', 'body': 'You are...', 'conclusion': 'You are...'}
         )
     """
     from lean.reasoning_memory import ReasoningMemory, generate_reasoning_collection_name
@@ -500,6 +499,10 @@ def create_agents(
             'conclusion': 'agent_1'
         }
 
+    # Default to empty prompts dict if not provided
+    if agent_prompts is None:
+        agent_prompts = {}
+
     agents = {}
 
     # Create intro agent
@@ -512,7 +515,8 @@ def create_agents(
         role='intro',
         agent_id=f"intro_{agent_ids['intro']}",
         reasoning_memory=intro_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('intro')
     )
 
     # Create body agent
@@ -525,7 +529,8 @@ def create_agents(
         role='body',
         agent_id=f"body_{agent_ids['body']}",
         reasoning_memory=body_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('body')
     )
 
     # Create conclusion agent
@@ -538,7 +543,8 @@ def create_agents(
         role='conclusion',
         agent_id=f"conclusion_{agent_ids['conclusion']}",
         reasoning_memory=conclusion_memory,
-        shared_rag=shared_rag
+        shared_rag=shared_rag,
+        system_prompt=agent_prompts.get('conclusion')
     )
 
     return agents

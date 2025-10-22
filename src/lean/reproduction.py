@@ -135,12 +135,13 @@ class AsexualReproduction(ReproductionStrategy):
             inherited_patterns = self._mutate_patterns(inherited_patterns)
             mutated = True
 
-        # Create offspring
+        # Create offspring (inherit system_prompt from parent)
         offspring = self._create_offspring(
             role=parent1.role,
             generation=generation,
             inherited_patterns=inherited_patterns,
-            shared_rag=shared_rag or parent1.shared_rag
+            shared_rag=shared_rag or parent1.shared_rag,
+            system_prompt=parent1.system_prompt
         )
 
         self._update_stats(mutated)
@@ -166,7 +167,8 @@ class AsexualReproduction(ReproductionStrategy):
         role: str,
         generation: int,
         inherited_patterns: List[Dict],
-        shared_rag: 'SharedRAG'
+        shared_rag: 'SharedRAG',
+        system_prompt: Optional[str] = None
     ) -> 'BaseAgent':
         """Create offspring agent with inherited patterns."""
         from lean.base_agent import IntroAgent, BodyAgent, ConclusionAgent
@@ -192,12 +194,13 @@ class AsexualReproduction(ReproductionStrategy):
         if not agent_class:
             raise ValueError(f"Unknown role: {role}")
 
-        # Create agent directly
+        # Create agent directly (inherit system_prompt from parent)
         agent = agent_class(
             role=role,
             agent_id=f"{role}_{child_id}",
             reasoning_memory=memory,
-            shared_rag=shared_rag
+            shared_rag=shared_rag,
+            system_prompt=system_prompt
         )
 
         return agent
@@ -268,12 +271,13 @@ class SexualReproduction(ReproductionStrategy):
             inherited_patterns = self._mutate_patterns(inherited_patterns)
             mutated = True
 
-        # Create offspring
+        # Create offspring (inherit system_prompt from parent1)
         offspring = self._create_offspring(
             role=parent1.role,
             generation=generation,
             inherited_patterns=inherited_patterns,
-            shared_rag=shared_rag or parent1.shared_rag
+            shared_rag=shared_rag or parent1.shared_rag,
+            system_prompt=parent1.system_prompt
         )
 
         self._update_stats(mutated)
@@ -309,7 +313,8 @@ class SexualReproduction(ReproductionStrategy):
         role: str,
         generation: int,
         inherited_patterns: List[Dict],
-        shared_rag: 'SharedRAG'
+        shared_rag: 'SharedRAG',
+        system_prompt: Optional[str] = None
     ) -> 'BaseAgent':
         """Create offspring agent with inherited patterns."""
         # Same as asexual for now
@@ -334,12 +339,13 @@ class SexualReproduction(ReproductionStrategy):
         if not agent_class:
             raise ValueError(f"Unknown role: {role}")
 
-        # Create agent directly
+        # Create agent directly (inherit system_prompt from parent)
         agent = agent_class(
             role=role,
             agent_id=f"{role}_{child_id}",
             reasoning_memory=memory,
-            shared_rag=shared_rag
+            shared_rag=shared_rag,
+            system_prompt=system_prompt
         )
 
         return agent

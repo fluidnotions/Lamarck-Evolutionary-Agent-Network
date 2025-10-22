@@ -50,7 +50,8 @@ class Pipeline:
         enable_research: bool = True,
         enable_specialists: bool = True,
         enable_revision: bool = True,
-        max_revisions: int = 2
+        max_revisions: int = 2,
+        agent_prompts: Optional[Dict[str, str]] = None
     ):
         """Initialize LEAN pipeline with hierarchical architecture.
 
@@ -65,6 +66,7 @@ class Pipeline:
             enable_specialists: Enable specialist agents
             enable_revision: Enable revision loop
             max_revisions: Maximum number of revision iterations
+            agent_prompts: Optional dict mapping role → system_prompt from YAML
         """
         self.domain = domain
         self.generation_counter = 0
@@ -73,12 +75,14 @@ class Pipeline:
         self.enable_specialists = enable_specialists
         self.enable_revision = enable_revision
         self.max_revisions = max_revisions
+        self.agent_prompts = agent_prompts or {}
 
         # Create content agents
         content_agents = create_agents(
             reasoning_dir=reasoning_dir,
             shared_rag_dir=shared_rag_dir,
-            agent_ids=agent_ids
+            agent_ids=agent_ids,
+            agent_prompts=self.agent_prompts
         )
 
         # Store shared_rag reference for evolution and specialists
@@ -97,14 +101,16 @@ class Pipeline:
             agent_id='coordinator_1',
             reasoning_memory=coordinator_memory,
             shared_rag=self.shared_rag,
-            enable_research=enable_research
+            enable_research=enable_research,
+            system_prompt=self.agent_prompts.get('coordinator')
         )
 
         # Create specialist agents (if enabled)
         if enable_specialists:
             self.specialists = create_specialist_agents(
                 reasoning_dir=reasoning_dir,
-                shared_rag=self.shared_rag
+                shared_rag=self.shared_rag,
+                agent_prompts=self.agent_prompts
             )
         else:
             self.specialists = None

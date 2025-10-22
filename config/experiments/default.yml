@@ -132,3 +132,8 @@ quality:
   memory_score_threshold: 7.0
   quality_threshold: 0.8
   max_passes: 3
+
+evolution:
+  selection_strategy: "tournament"
+  compaction_strategy: "hybrid"
+  reproduction_strategy: "sexual"  

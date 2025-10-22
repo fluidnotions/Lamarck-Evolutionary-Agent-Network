@@ -33,7 +33,8 @@ class CoordinatorAgent(BaseAgent):
         reasoning_memory: ReasoningMemory,
         shared_rag: SharedRAG,
         parent_ids: Optional[List[str]] = None,
-        enable_research: bool = True
+        enable_research: bool = True,
+        system_prompt: Optional[str] = None
     ):
         """Initialize coordinator agent.
 
@@ -43,13 +44,15 @@ class CoordinatorAgent(BaseAgent):
             shared_rag: Shared knowledge base
             parent_ids: Parent agent IDs
             enable_research: Whether to enable Tavily research
+            system_prompt: Base system prompt from YAML config
         """
         super().__init__(
             role='coordinator',
             agent_id=agent_id,
             reasoning_memory=reasoning_memory,
             shared_rag=shared_rag,
-            parent_ids=parent_ids
+            parent_ids=parent_ids,
+            system_prompt=system_prompt
         )
 
         self.enable_research = enable_research
@@ -75,34 +78,6 @@ class CoordinatorAgent(BaseAgent):
         except ImportError:
             print("[Warning] Tavily package not installed, research disabled")
             self.enable_research = False
-
-    def _get_role_instruction(self) -> str:
-        """Fixed prompt for coordinator agent (Layer 1)."""
-        return """You are a Coordinator Agent in the LEAN evolutionary system.
-
-Your role is to:
-1. Research the topic using available tools (Tavily search)
-2. Parse high-level intent and extract key themes
-3. Distribute context to child agents (intro, body, conclusion)
-4. Aggregate their outputs into a cohesive final piece
-5. Critique overall quality and request revisions if needed
-
-You have access to:
-- Tavily search for real-time research
-- Reasoning patterns from successful past attempts
-- Domain knowledge from shared RAG
-
-When researching:
-- Search for recent, credible sources
-- Identify key facts, statistics, and expert opinions
-- Note any controversies or multiple perspectives
-- Summarize findings for distribution to child agents
-
-When critiquing:
-- Check for coherence across all sections
-- Verify factual accuracy against research
-- Assess depth and insight
-- Score on 0-10 scale with specific feedback"""
 
     def research_topic(
         self,
