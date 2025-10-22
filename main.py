@@ -22,6 +22,7 @@ import asyncio
 import os
 import argparse
 from dotenv import load_dotenv
+from loguru import logger
 
 from src.lean.pipeline import Pipeline
 from src.lean.config_loader import load_config
