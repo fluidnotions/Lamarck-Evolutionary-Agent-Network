@@ -118,6 +118,19 @@ topic_blocks:
         keywords: ["renewable energy", "AI", "optimization", "grid management"]
         difficulty: "advanced"
 
+# Model & Agent Configuration
+model:
+  base_temperature: 0.7
+  embedding_model: "all-MiniLM-L6-v2"
+
+# Memory Configuration
+memory:
+  max_knowledge_retrieve: 3
+  max_reasoning_retrieve: 5
+  inherited_reasoning_size: 100
+  score_threshold: 7.0
+  shared_rag_min_score: 8.0
+
 # Research settings for Tavily integration
 research:
   enabled: true
@@ -127,13 +140,19 @@ research:
   include_domains: []  # Optional: specific domains to include
   exclude_domains: []  # Optional: domains to exclude
 
-# Quality thresholds
-quality:
-  memory_score_threshold: 7.0
-  quality_threshold: 0.8
-  max_passes: 3
-
+# Evolution Configuration
 evolution:
   selection_strategy: "tournament"
   compaction_strategy: "hybrid"
-  reproduction_strategy: "sexual"  
+  reproduction_strategy: "sexual"
+
+# Human-in-the-Loop Configuration
+hitl:
+  enabled: true
+  auto_approve: false
+  verbose: true
+  review_points: ""
+
+# Visualization Configuration
+visualization:
+  enabled: true  

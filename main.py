@@ -129,19 +129,19 @@ async def main(config_name: str = "default"):
     print(f"Evolution events at generations: {', '.join(str(i) for i in range(exp_config.evolution_frequency, TOTAL_GENERATIONS + 1, exp_config.evolution_frequency))}\n")
 
     # Execute generations
-    for gen_num, topic_config in enumerate(topics, start=1):
-        # topic_config is a TopicConfig object, get its title attribute
-        topic = topic_config.title if hasattr(topic_config, 'title') and isinstance(topic_config.title, str) else str(topic_config.title) if callable(topic_config.title) else str(topic_config)
-
+    for gen_num, topic in enumerate(topics, start=1):
+        # topic is a string (topic title from get_all_topics())
         print(f"\n{'='*70}")
         print(f"Generation {gen_num}/{len(topics)}")
         print(f"Topic: {topic}")
 
         # Show topic metadata
-        if hasattr(topic_config, 'keywords') and topic_config.keywords:
-            print(f"Keywords: {', '.join(topic_config.keywords)}")
-        if hasattr(topic_config, 'difficulty') and topic_config.difficulty:
-            print(f"Difficulty: {topic_config.difficulty}")
+        metadata = exp_config.get_topic_metadata(topic)
+        if metadata:
+            if metadata.get('keywords'):
+                print(f"Keywords: {', '.join(metadata['keywords'])}")
+            if metadata.get('difficulty'):
+                print(f"Difficulty: {metadata['difficulty']}")
 
         print(f"{'='*70}\n")
 

@@ -54,6 +54,48 @@ class ExperimentConfig:
     research_config: Dict[str, Any]
     quality_config: Dict[str, Any]
 
+    # Model & Agent Configuration
+    model_config: Optional[Dict[str, Any]] = None
+
+    # Memory Configuration
+    memory_config: Optional[Dict[str, Any]] = None
+
+    # Evolution Configuration
+    evolution_config: Optional[Dict[str, Any]] = None
+
+    # Human-in-the-Loop Configuration
+    hitl_config: Optional[Dict[str, Any]] = None
+
+    # Visualization Configuration
+    visualization_config: Optional[Dict[str, Any]] = None
+
+    def get_config_value(self, section: str, key: str, default: Any = None, env_var: str = None) -> Any:
+        """Get configuration value from YAML with fallback to environment variable.
+
+        Args:
+            section: Config section (e.g., 'model', 'memory', 'hitl')
+            key: Key within section
+            default: Default value if not found
+            env_var: Environment variable name for fallback
+
+        Returns:
+            Config value, env value, or default
+        """
+        import os
+
+        # Try to get from YAML config
+        config_section = getattr(self, f'{section}_config', None)
+        if config_section and isinstance(config_section, dict):
+            value = config_section.get(key)
+            if value is not None:
+                return value
+
+        # Fallback to environment variable
+        if env_var:
+            return os.getenv(env_var, default)
+
+        return default
+
     def get_all_topics(self) -> List[str]:
         """Extract all topic titles in order."""
         topics = []
@@ -155,7 +197,12 @@ class ConfigLoader:
             domain=exp_data['domain'],
             topic_blocks=topic_blocks,
             research_config=data.get('research', {}),
-            quality_config=data.get('quality', {})
+            quality_config=data.get('quality', {}),
+            model_config=data.get('model', {}),
+            memory_config=data.get('memory', {}),
+            evolution_config=data.get('evolution', {}),
+            hitl_config=data.get('hitl', {}),
+            visualization_config=data.get('visualization', {})
         )
 
     def load_agent_prompts(self) -> Dict[str, AgentPromptConfig]:

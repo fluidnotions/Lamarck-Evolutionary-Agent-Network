@@ -1,0 +1,68 @@
+# LEAN Fast Test Configuration
+# Minimal config for quick testing with reduced generations and disabled extras
+
+experiment:
+  name: "Fast Test Experiment"
+  description: "Quick test with minimal generations for rapid iteration"
+  population_size: 2
+  evolution_frequency: 2
+  total_generations: 3
+  reasoning_dir: "./data/fast_test_reasoning"
+  shared_rag_dir: "./data/fast_test_shared_rag"
+  domain: "AI"
+
+# Topic blocks - just 3 simple topics
+topic_blocks:
+  - name: "AI Quick Test"
+    description: "Minimal topics for fast testing"
+    generation_range: [1, 3]
+    documentation: "config/docs/ai-fundamentals.md"
+    topics:
+      - title: "Introduction to AI"
+        keywords: ["AI", "introduction", "basics"]
+        difficulty: "beginner"
+
+      - title: "Machine Learning Basics"
+        keywords: ["ML", "learning", "algorithms"]
+        difficulty: "beginner"
+
+      - title: "AI Applications"
+        keywords: ["AI", "applications", "use cases"]
+        difficulty: "beginner"
+
+# Model & Agent Configuration
+model:
+  base_temperature: 0.7
+  embedding_model: "all-MiniLM-L6-v2"
+
+# Memory Configuration
+memory:
+  max_knowledge_retrieve: 3
+  max_reasoning_retrieve: 5
+  inherited_reasoning_size: 100
+  score_threshold: 7.0
+  shared_rag_min_score: 8.0
+
+# Research settings - disabled for speed
+research:
+  enabled: false
+  provider: "tavily"
+  max_results: 3
+  search_depth: "basic"
+
+# Evolution Configuration
+evolution:
+  selection_strategy: "tournament"
+  compaction_strategy: "hybrid"
+  reproduction_strategy: "sexual"
+
+# Human-in-the-Loop - disabled for speed
+hitl:
+  enabled: false
+  auto_approve: true
+  verbose: false
+  review_points: ""
+
+# Visualization - disabled for speed
+visualization:
+  enabled: false
