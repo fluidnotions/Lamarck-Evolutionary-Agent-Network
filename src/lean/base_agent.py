@@ -98,14 +98,17 @@ class BaseAgent(ABC):
             Initialized LLM client (ChatAnthropic or ChatOpenAI)
         """
         provider = (self.llm_config.get("provider") or "anthropic").lower()
-        temperature = float(self.llm_config.get("base_temperature", 0.7))
-
+        temperature = float(self.llm_config.get("base_temperature", 0.6))
+        base_url = self.llm_config.get("base_url", None)
+        api_key= os.getenv("OPENAI_API_KEY", None)
         if provider == "openai":
             model_name = self.llm_config.get("model_name", "gpt-4-turbo-preview")
+            # for runpod models    
             return ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                api_key=os.getenv("OPENAI_API_KEY")
+                api_key=api_key,
+                base_url=base_url
             )
         elif provider == "anthropic":
             model_name = self.llm_config.get("model_name", "claude-3-5-sonnet-20241022")
